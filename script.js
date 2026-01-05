@@ -1500,10 +1500,10 @@ applyGrid();
     const avatarGrid = avatars
       .map(avatar => {
         const isSelected =
-          savedAvatar === avatar ? "border-color: #7a7a7a;" : "border-color: #333;";
+          savedAvatar === avatar ? "box-shadow: 0 0 0 3px #8a8a8a;" : "box-shadow: none;";
         return `
-          <div class="avatar-card" data-avatar="${avatar}" style="cursor: pointer; border: 2px solid #333; border-radius: 8px; padding: 8px; transition: border-color 0.3s; ${isSelected}">
-            <img src="${avatar}" alt="Avatar" style="width: 128px; height: 128px; display: block; border-radius: 4px; object-fit: contain;">
+          <div class="avatar-card" data-avatar="${avatar}" style="cursor: pointer; border: none; border-radius: 8px; padding: 6px; transition: box-shadow 0.2s ease, transform 0.2s ease; ${isSelected}">
+            <img src="${avatar}" alt="Avatar" style="width: 120px; height: 120px; display: block; border-radius: 6px; object-fit: contain; background: #0f0f0f;">
           </div>
         `;
       })
@@ -1520,7 +1520,7 @@ applyGrid();
           <input type="text" id="roomname" class="swal2-input" placeholder="Enter room name" value="${savedRoom}" style="margin-top: 0;">
 
           <label style="display: block; margin-bottom: 10px; margin-top: 15px; font-weight: bold;">Choose an Avatar:</label>
-          <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-height: 300px; overflow-y: auto; padding: 5px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 12px; padding: 5px;">
             ${avatarGrid}
           </div>
           <input type="hidden" id="selectedAvatar" value="${savedAvatar}">
@@ -1543,8 +1543,8 @@ applyGrid();
         const cards = document.querySelectorAll(".avatar-card");
         cards.forEach(card => {
           card.addEventListener("click", function () {
-            cards.forEach(c => (c.style.borderColor = "#333"));
-            this.style.borderColor = "#7a7a7a";
+            cards.forEach(c => (c.style.boxShadow = "none"));
+            this.style.boxShadow = "0 0 0 3px #8a8a8a";
             const hidden = document.getElementById("selectedAvatar");
             if (hidden) hidden.value = this.dataset.avatar;
           });
@@ -1610,10 +1610,10 @@ applyGrid();
     const avatarGrid = avatars
       .map(avatar => {
         const isSelected =
-          savedAvatar === avatar ? "border-color: #7a7a7a;" : "border-color: #333;";
+          savedAvatar === avatar ? "box-shadow: 0 0 0 3px #8a8a8a;" : "box-shadow: none;";
         return `
-          <div class="avatar-card" data-avatar="${avatar}" style="cursor: pointer; border: 2px solid #333; border-radius: 8px; padding: 8px; transition: border-color 0.3s; ${isSelected}">
-            <img src="${avatar}" alt="Avatar" style="width: 128px; height: 128px; display: block; border-radius: 4px; object-fit: contain;">
+          <div class="avatar-card" data-avatar="${avatar}" style="cursor: pointer; border: none; border-radius: 8px; padding: 6px; transition: box-shadow 0.2s ease, transform 0.2s ease; ${isSelected}">
+            <img src="${avatar}" alt="Avatar" style="width: 120px; height: 120px; display: block; border-radius: 6px; object-fit: contain; background: #0f0f0f;">
           </div>
         `;
       })
@@ -1627,7 +1627,7 @@ applyGrid();
           <input type="text" id="username" class="swal2-input" placeholder="Enter your username" value="${savedUsername}" style="margin-top: 0;">
 
           <label style="display: block; margin-bottom: 10px; margin-top: 15px; font-weight: bold;">Choose an Avatar:</label>
-          <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-height: 300px; overflow-y: auto; padding: 5px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 12px; padding: 5px;">
             ${avatarGrid}
           </div>
           <input type="hidden" id="selectedAvatar" value="${savedAvatar}">
@@ -1650,8 +1650,8 @@ applyGrid();
         const cards = document.querySelectorAll(".avatar-card");
         cards.forEach(card => {
           card.addEventListener("click", function () {
-            cards.forEach(c => (c.style.borderColor = "#333"));
-            this.style.borderColor = "#7a7a7a";
+            cards.forEach(c => (c.style.boxShadow = "none"));
+            this.style.boxShadow = "0 0 0 3px #8a8a8a";
             const hidden = document.getElementById("selectedAvatar");
             if (hidden) hidden.value = this.dataset.avatar;
           });
