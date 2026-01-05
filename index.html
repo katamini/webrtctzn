@@ -30,6 +30,12 @@
 
     <div id="app-shell">
       <div class="mobile-shell">
+        <div class="mobile-menu">
+          <button id="mobile-menu-toggle" class="mobile-menu-toggle" type="button" aria-label="Open menu">⋮</button>
+          <div id="mobile-menu-dropdown" class="mobile-menu-dropdown">
+            <button id="mobile-minimize" type="button">Minimize</button>
+          </div>
+        </div>
         <div class="mobile-tabs" id="mobile-tabs">
           <button class="mobile-tab" data-target="chat">CHAT</button>
           <button class="mobile-tab" data-target="video">WHO</button>
@@ -179,6 +185,7 @@
           <div class="resize-handle row" data-index="0"></div>
         </div>
       </div>
+      <div id="mobile-handle" class="collapse-handle" role="button" aria-label="Restore panel">Tap to reopen</div>
     </div>
 
     <div id="mySidenav" class="sidenav">

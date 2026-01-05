@@ -64,6 +64,10 @@ var start = function() {
   const tiles = Array.from(document.querySelectorAll(".tile"));
   const mobileTabs = document.querySelectorAll(".mobile-tab");
   const mobileQuery = window.matchMedia("(max-width: 720px)");
+  const mobileMenuToggle = byId("mobile-menu-toggle");
+  const mobileMenuDropdown = byId("mobile-menu-dropdown");
+  const mobileMinimize = byId("mobile-minimize");
+  const mobileHandle = byId("mobile-handle");
   let isMobile = mobileQuery.matches;
   let activeMobile = "chat";
   const whoList = null;
@@ -120,6 +124,66 @@ var start = function() {
     whiteboard.height = rect.height;
   }
   setWhiteboardSize();
+
+  function setMobileCollapsed(state) {
+    if (!isMobile) state = false;
+    document.body.classList.toggle("mobile-collapsed", state);
+    if (!state && mobileMenuDropdown) {
+      mobileMenuDropdown.classList.remove("open");
+    }
+  }
+
+  if (mobileMenuToggle && mobileMenuDropdown) {
+    mobileMenuToggle.addEventListener("click", () => {
+      if (!isMobile) return;
+      mobileMenuDropdown.classList.toggle("open");
+    });
+  }
+
+  if (mobileMinimize) {
+    mobileMinimize.addEventListener("click", () => {
+      if (!isMobile) return;
+      setMobileCollapsed(true);
+    });
+  }
+
+  if (mobileHandle) {
+    mobileHandle.addEventListener("click", () => {
+      setMobileCollapsed(false);
+    });
+    let dragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+    const onMove = e => {
+      if (!dragging) return;
+      const x = e.touches ? e.touches[0].clientX : e.clientX;
+      const y = e.touches ? e.touches[0].clientY : e.clientY;
+      mobileHandle.style.left = Math.max(8, Math.min(window.innerWidth - mobileHandle.offsetWidth - 8, x - offsetX)) + "px";
+      mobileHandle.style.top = Math.max(8, Math.min(window.innerHeight - mobileHandle.offsetHeight - 8, y - offsetY)) + "px";
+    };
+    mobileHandle.addEventListener("pointerdown", e => {
+      dragging = true;
+      offsetX = e.offsetX;
+      offsetY = e.offsetY;
+      mobileHandle.setPointerCapture(e.pointerId);
+    });
+    mobileHandle.addEventListener("pointermove", onMove);
+    mobileHandle.addEventListener("pointerup", e => {
+      dragging = false;
+      mobileHandle.releasePointerCapture(e.pointerId);
+    });
+    mobileHandle.addEventListener("touchstart", e => {
+      dragging = true;
+      const touch = e.touches[0];
+      const rect = mobileHandle.getBoundingClientRect();
+      offsetX = touch.clientX - rect.left;
+      offsetY = touch.clientY - rect.top;
+    });
+    mobileHandle.addEventListener("touchmove", onMove);
+    mobileHandle.addEventListener("touchend", () => {
+      dragging = false;
+    });
+  }
 
   function resizeAudioViz() {
     if (!audioViz) return;
@@ -248,9 +312,11 @@ applyGrid();
     isMobile = e.matches;
     if (isMobile) {
       setMobileActive(activeMobile || "chat");
+      setMobileCollapsed(false);
     } else {
       tiles.forEach(tile => tile.classList.remove("mobile-active"));
       mobileTabs.forEach(tab => tab.classList.remove("active"));
+      setMobileCollapsed(false);
     }
   });
 
