@@ -1442,23 +1442,8 @@ applyGrid();
     
     if (!youtubeInput || !youtubeLoadBtn) return;
     
-    // Handle video input
-    youtubeInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        const input = youtubeInput.value.trim();
-        if (input) {
-          const videoId = extractVideoId(input);
-          if (videoId) {
-            loadYouTubeVideo(videoId);
-            youtubeInput.value = '';
-          } else {
-            notifyMe('Invalid YouTube URL or video ID');
-          }
-        }
-      }
-    });
-    
-    youtubeLoadBtn.addEventListener('click', () => {
+    // Helper function to handle video loading from input
+    const handleVideoLoad = () => {
       const input = youtubeInput.value.trim();
       if (input) {
         const videoId = extractVideoId(input);
@@ -1469,14 +1454,16 @@ applyGrid();
           notifyMe('Invalid YouTube URL or video ID');
         }
       }
+    };
+    
+    // Handle video input
+    youtubeInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        handleVideoLoad();
+      }
     });
     
-    // When peers join, send them current video state
-    if (room) {
-      const originalOnPeerJoin = room.onPeerJoin;
-      // Note: We already handle this in the existing onPeerJoin callback above
-      // So we'll just add logic to send YouTube state there if needed
-    }
+    youtubeLoadBtn.addEventListener('click', handleVideoLoad);
   }
 
   // Make YouTube player available globally for the API callback
