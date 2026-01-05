@@ -891,7 +891,7 @@ var start = function() {
       const label = document.createElement("div");
       label.className = "video-label";
       label.id = "label_" + id;
-      label.innerText = isSelf ? "you" : id.slice(0, 8);
+      label.innerText = isSelf ? (userName || "you") : id.slice(0, 8);
       frame.appendChild(video);
       frame.appendChild(label);
       videoFeed.appendChild(frame);
@@ -903,6 +903,8 @@ var start = function() {
 
     if (userName && sendCmd) {
       sendCmd({ peerId: selfId, cmd: "username", username: userName });
+      const selfLabel = byId("label_" + selfId);
+      if (selfLabel) selfLabel.innerText = userName;
     }
 
     if (whoList) {
@@ -1175,6 +1177,10 @@ var start = function() {
         if (sendCmd) {
           sendCmd({ peerId: selfId, cmd: "username", username: userName });
         }
+        const selfLabel = byId("label_" + selfId);
+        if (selfLabel) selfLabel.innerText = userName;
+        const selfWho = byId("who_" + selfId);
+        if (selfWho) selfWho.innerText = userName;
       }
     });
   }
