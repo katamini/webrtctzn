@@ -956,6 +956,8 @@ applyGrid();
       if (!room) return;
       
       const peers = room.getPeers();
+      if (!peers || !Array.isArray(peers)) return;
+      
       for (const peerId of peers) {
         try {
           const latency = await room.ping(peerId);
@@ -1285,7 +1287,9 @@ applyGrid();
   }
 
   function updatePeerInfo() {
-    const count = room.getPeers().length;
+    if (!room) return;
+    const peers = room.getPeers();
+    const count = peers && Array.isArray(peers) ? peers.length : 0;
     byId("room-num").innerText = "#" + window.roomId + ` (${count})`;
     if (userName && sendCmd) {
       sendCmd({ peerId: selfId, cmd: "username", username: userName });
