@@ -98,12 +98,16 @@ var start = function() {
       const width = audioViz.width || 1;
       const height = audioViz.height || 1;
       ctx.clearRect(0, 0, width, height);
+      const grad = ctx.createLinearGradient(0, 0, 0, height);
+      grad.addColorStop(0, "#9ef0c0");
+      grad.addColorStop(0.5, "#5eead4");
+      grad.addColorStop(1, "#38bdf8");
       const slice = Math.max(1, Math.floor(vizData.length / bars));
       const barWidth = width / bars;
       for (let i = 0; i < bars; i++) {
         const v = vizData[i * slice] / 255;
         const barHeight = v * height;
-        ctx.fillStyle = "#7ee787";
+        ctx.fillStyle = grad;
         ctx.fillRect(i * barWidth, height - barHeight, barWidth * 0.75, barHeight);
       }
     };
