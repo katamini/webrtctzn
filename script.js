@@ -286,9 +286,10 @@ var start = function() {
     roomName = urlParams.get("room");
     init(roomName);
   } else {
+    // No room specified - prompt user for room name
+    // getRoomName() will redirect page with room parameter, so we exit early
+    // to prevent errors from using undefined roomName in URL formatting below
     getRoomName();
-    //roomName = "lobby";
-    //init(roomName);
     return; // Exit early - getRoomName will redirect the page
   }
   if (urlParams.has("video") || features.video) {
@@ -572,6 +573,12 @@ var start = function() {
   function setupStreamHealthMonitoring() {
     if (healthCheckInterval) {
       clearInterval(healthCheckInterval);
+    }
+    
+    // Only setup monitoring if room has ping capability
+    if (!room || typeof room.ping !== 'function') {
+      console.log('Room ping not available, skipping health monitoring');
+      return;
     }
     
     // Monitor connection health every 30 seconds
