@@ -1350,11 +1350,14 @@ applyGrid();
     // - Embed: youtube.com/embed/VIDEO_ID or youtube-nocookie.com/embed/VIDEO_ID
     // - Shorts: youtube.com/shorts/VIDEO_ID
     // - Live: youtube.com/live/VIDEO_ID
+    // - Mobile: m.youtube.com/watch?v=VIDEO_ID (and other subdomains)
     const patterns = [
-      // Match youtu.be short URLs and all /path/VIDEO_ID formats (embed, shorts, live)
-      /(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:embed|shorts|live)\/)([a-zA-Z0-9_-]{11})/,
+      // Match youtu.be short URLs and all /path/VIDEO_ID formats with optional subdomains
+      // Non-capturing group (?:^|[^a-zA-Z0-9-]) ensures we don't match fake domains like "notyoutube.com"
+      /(?:youtu\.be\/|(?:^|[^a-zA-Z0-9-])(?:[a-zA-Z0-9-]+\.)?youtube(?:-nocookie)?\.com\/(?:embed|shorts|live)\/)([a-zA-Z0-9_-]{11})/,
       // Match watch URLs with v parameter (works with any subdomain like m.youtube.com)
-      /youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/
+      // Non-capturing group (?:^|[^a-zA-Z0-9-]) ensures we don't match fake domains
+      /(?:^|[^a-zA-Z0-9-])(?:[a-zA-Z0-9-]+\.)?youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/
     ];
     
     for (const pattern of patterns) {
