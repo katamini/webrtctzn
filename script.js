@@ -63,7 +63,7 @@ var start = function() {
   const audioViz = byId("audio-visualizer");
   const tiles = Array.from(document.querySelectorAll(".tile"));
   const mobileTabs = document.querySelectorAll(".mobile-tab");
-  const mobileQuery = window.matchMedia("(max-width: 980px)");
+  const mobileQuery = window.matchMedia("(max-width: 720px)");
   let isMobile = mobileQuery.matches;
   let activeMobile = "chat";
   const whoList = null;
@@ -236,6 +236,8 @@ applyGrid();
     mobileTabs.forEach(tab => {
       tab.classList.toggle("active", tab.dataset.target === target);
     });
+    setWhiteboardSize();
+    resizeAudioViz();
   }
 
   if (isMobile) {
@@ -260,11 +262,8 @@ applyGrid();
   });
 
   function expandTile(tile) {
-    if (isMobile) {
-      if (tile && tile.dataset.tile) {
-        setMobileActive(tile.dataset.tile);
-      }
-      return;
+    if (isMobile && tile && tile.dataset.tile) {
+      setMobileActive(tile.dataset.tile);
     }
     if (!tile) return;
     const tiles = Array.from(document.querySelectorAll(".tile"));
