@@ -144,16 +144,56 @@ var start = function() {
       });
     }
 
-    if (rowHandles && rowHandles.length) {
-      const totalRows = rowPerc.reduce((a, b) => a + b, 0);
-      rowHandles.forEach(handle => {
-        const idx = Number(handle.dataset.index);
-        const rowAcc = rowPerc.slice(0, idx + 1).reduce((a, b) => a + b, 0);
-        handle.style.top = (rowAcc / totalRows) * 100 + "%";
-      });
-    }
+  if (rowHandles && rowHandles.length) {
+    const totalRows = rowPerc.reduce((a, b) => a + b, 0);
+    rowHandles.forEach(handle => {
+      const idx = Number(handle.dataset.index);
+      const rowAcc = rowPerc.slice(0, idx + 1).reduce((a, b) => a + b, 0);
+      handle.style.top = (rowAcc / totalRows) * 100 + "%";
+    });
   }
-  applyGrid();
+}
+applyGrid();
+
+  function expandTile(tile) {
+    if (!tile) return;
+    const tiles = Array.from(document.querySelectorAll(".tile"));
+    const idx = tiles.indexOf(tile);
+    if (idx === -1) return;
+    const colIdx = idx % 4;
+    const rowIdx = Math.floor(idx / 4);
+
+    if (expandedTile === tile && savedPerc) {
+      colPerc = [...savedPerc.col];
+      rowPerc = [...savedPerc.row];
+      expandedTile = null;
+      savedPerc = null;
+      applyGrid();
+      setWhiteboardSize();
+      resizeAudioViz();
+      return;
+    }
+
+    savedPerc = { col: [...colPerc], row: [...rowPerc] };
+    expandedTile = tile;
+
+    const small = 15;
+    const large = 55;
+    colPerc = [small, small, small, small];
+    colPerc[colIdx] = large;
+    const colTotal = colPerc.reduce((a, b) => a + b, 0);
+    colPerc = colPerc.map(v => (v / colTotal) * 100);
+
+    if (rowIdx === 0) {
+      rowPerc = [75, 25];
+    } else {
+      rowPerc = [25, 75];
+    }
+
+    applyGrid();
+    setWhiteboardSize();
+    resizeAudioViz();
+  }
 
   function bindResize(handle) {
     const idx = Number(handle.dataset.index);
@@ -211,6 +251,14 @@ var start = function() {
     applyGrid();
     setWhiteboardSize();
     resizeAudioViz();
+  });
+  document.querySelectorAll(".tile-head").forEach(head => {
+    head.addEventListener("dblclick", e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const tile = head.closest(".tile");
+      expandTile(tile);
+    });
   });
 
   function expandTile(tile) {
