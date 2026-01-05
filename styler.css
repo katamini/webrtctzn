@@ -743,6 +743,7 @@ body {
 .tile.file { background: #000; }
 .tile.settings { background: #525252; }
 .tile.who { background: #575757; }
+.tile.spacer { background: transparent; border: none; }
 .who-body {
   position: relative;
   flex: 1;
