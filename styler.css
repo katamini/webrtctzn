@@ -742,7 +742,7 @@ body {
 .tile.draw { background: #1e1e1e; }
 .tile.file { background: #000; }
 .tile.settings { background: #525252; }
-.tile.spacer { background: transparent; border: none; }
+.tile.spacer { background: transparent; border: 1px dashed #333; }
 .who-body {
   position: relative;
   flex: 1;
