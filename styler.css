@@ -750,18 +750,6 @@ body {
   flex-direction: column;
   height: 100%;
 }
-.who-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 14px;
-  flex: 1;
-  max-height: 100%;
-  overflow: auto;
-}
 .who-logo {
   position: absolute;
   right: 12px;

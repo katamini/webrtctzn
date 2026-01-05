@@ -17,7 +17,7 @@ var start = function() {
   const videoFeed = byId("video-feed");
   const chatSend = byId("chat-send");
   const audioViz = byId("audio-visualizer");
-  const whoList = byId("who-list");
+  const whoList = null;
 
   const circle = null;
   const chat = byId("chat");
@@ -798,8 +798,6 @@ var start = function() {
       } else if (data.cmd == "username" && data.username) {
         var label = byId("label_" + id);
         if (label) label.innerText = data.username;
-        var li = byId("who_" + id);
-        if (li) li.innerText = data.username;
       } else if (data.cmd == "img" && data) {
         //console.log("got image", data);
         //displayImageOnCanvas(data.img, data.pos);
@@ -907,13 +905,6 @@ var start = function() {
       if (selfLabel) selfLabel.innerText = userName;
     }
 
-    if (whoList) {
-      const li = document.createElement("li");
-      li.id = "who_" + id;
-      li.innerText = isSelf ? "you" : id.slice(0, 8);
-      whoList.appendChild(li);
-    }
-
     // are we sharing?
     if (screenSharing){
        console.log('wea re still screensharing!',screenSharing.id)
@@ -949,10 +940,6 @@ var start = function() {
       delete peerHealthStatus[id];
     }
 
-    var li = byId("who_" + id);
-    if (li && li.parentNode) {
-      li.parentNode.removeChild(li);
-    }
     const frame = byId("frame_" + id);
     if (frame && frame.parentNode) {
       frame.parentNode.removeChild(frame);
@@ -1179,8 +1166,6 @@ var start = function() {
         }
         const selfLabel = byId("label_" + selfId);
         if (selfLabel) selfLabel.innerText = userName;
-        const selfWho = byId("who_" + selfId);
-        if (selfWho) selfWho.innerText = userName;
       }
     });
   }
