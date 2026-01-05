@@ -857,8 +857,6 @@ var start = function() {
     el.id = "cursor_" + id;
     const img = document.createElement("img");
     img.id = "hand_" + id;
-    const txt = document.createElement("p");
-    txt.id = "name_" + id;
     const video = document.createElement("video");
     video.id = "vid_" + id;
     video.playsInline = true;
@@ -868,9 +866,7 @@ var start = function() {
     el.className = `cursor${isSelf ? " self" : ""}`;
     el.style.left = el.style.top = "-99px";
     img.src = "static/hand.png";
-    txt.innerText = isSelf ? "you" : id.slice(0, 4);
     el.appendChild(img);
-    el.appendChild(txt);
     if (isSelf) {
       img.style.display = "none";
     }
