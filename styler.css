@@ -583,6 +583,23 @@ body {
   background: #101010;
 }
 
+.video-frame {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.video-label {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #f0f0f0;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
 .screen-view {
   flex: 1;
   background: #1b1b1b;

@@ -785,10 +785,10 @@ var start = function() {
           }
         }
       } else if (data.cmd == "username" && data.username) {
-        var el = byId("name_" + id);
-        if (el) el.innerText = data.username;
-        var us = byId("user_" + id);
-        if (us) us.innerText = data.username;
+        var label = byId("label_" + id);
+        if (label) label.innerText = data.username;
+        var li = byId("who_" + id);
+        if (li) li.innerText = data.username;
       } else if (data.cmd == "img" && data) {
         //console.log("got image", data);
         //displayImageOnCanvas(data.img, data.pos);
@@ -874,7 +874,16 @@ var start = function() {
     cursors[id] = el;
 
     if (videoFeed) {
-      videoFeed.appendChild(video);
+      const frame = document.createElement("div");
+      frame.className = "video-frame";
+      frame.id = "frame_" + id;
+      const label = document.createElement("div");
+      label.className = "video-label";
+      label.id = "label_" + id;
+      label.innerText = isSelf ? "you" : id.slice(0, 8);
+      frame.appendChild(video);
+      frame.appendChild(label);
+      videoFeed.appendChild(frame);
     }
 
     if (!isSelf) {
@@ -930,6 +939,10 @@ var start = function() {
     var li = byId("who_" + id);
     if (li && li.parentNode) {
       li.parentNode.removeChild(li);
+    }
+    const frame = byId("frame_" + id);
+    if (frame && frame.parentNode) {
+      frame.parentNode.removeChild(frame);
     }
 
     updatePeerInfo();
