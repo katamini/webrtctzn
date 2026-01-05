@@ -11,13 +11,16 @@ var start = function() {
   const ctx = whiteboard.getContext("2d");
   const drawSurface = byId("draw-surface");
   const mainGrid = byId("main-grid");
-  const resizeHandles = document.querySelectorAll(".resize-handle");
+  const outerHandles = document.querySelectorAll(".resize-layer.outer .resize-handle.col");
+  const centerRowHandles = document.querySelectorAll(".resize-layer.center-row .resize-handle.row");
   const videoToggle = byId("video-toggle");
   const videoFeed = byId("video-feed");
   const chatSend = byId("chat-send");
   const audioViz = byId("audio-visualizer");
+  const centerGrid = byId("center-grid");
+  const whoList = byId("who-list");
 
-  const circle = byId("list");
+  const circle = null;
   const chat = byId("chat");
   const chatbox = byId("chatbox");
   const talkbutton = byId("talkbutton");
@@ -108,12 +111,12 @@ var start = function() {
     draw();
   }
 
-  const defaultColPerc = [25, 25, 25, 25];
-  const defaultRowPerc = [50, 50];
+  const defaultColPerc = [20, 55, 25];
+  const defaultCenterRows = [65, 35];
   let colPerc = [...defaultColPerc];
-  let rowPerc = [...defaultRowPerc];
+  let centerRowPerc = [...defaultCenterRows];
   const minCol = 10;
-  const minRow = 20;
+  const minRow = 15;
   let expandedTile = null;
   let savedPerc = null;
   let audioCtx = null;
@@ -123,27 +126,35 @@ var start = function() {
   let vizRaf = null;
 
   function applyGrid() {
-    if (!mainGrid) return;
-    mainGrid.style.setProperty("--col-1", colPerc[0] + "%");
-    mainGrid.style.setProperty("--col-2", colPerc[1] + "%");
-    mainGrid.style.setProperty("--col-3", colPerc[2] + "%");
-    mainGrid.style.setProperty("--col-4", colPerc[3] + "%");
-    mainGrid.style.setProperty("--row-1", rowPerc[0] + "%");
-    mainGrid.style.setProperty("--row-2", rowPerc[1] + "%");
+    if (mainGrid) {
+      mainGrid.style.setProperty("--col-1", colPerc[0] + "%");
+      mainGrid.style.setProperty("--col-2", colPerc[1] + "%");
+      mainGrid.style.setProperty("--col-3", colPerc[2] + "%");
+    }
+    if (centerGrid) {
+      centerGrid.style.setProperty("--c-row-1", centerRowPerc[0] + "%");
+      centerGrid.style.setProperty("--c-row-2", centerRowPerc[1] + "%");
+    }
 
-    if (resizeHandles && resizeHandles.length) {
-      let acc = 0;
+    if (outerHandles && outerHandles.length) {
       const totalCols = colPerc.reduce((a, b) => a + b, 0);
-      const totalRows = rowPerc.reduce((a, b) => a + b, 0);
-      resizeHandles.forEach(handle => {
+      outerHandles.forEach(handle => {
         const idx = Number(handle.dataset.index);
-        if (handle.classList.contains("col")) {
-          acc = colPerc.slice(0, idx + 1).reduce((a, b) => a + b, 0);
-          handle.style.left = (acc / totalCols) * 100 + "%";
-        } else if (handle.classList.contains("row")) {
-          const rowAcc = rowPerc.slice(0, idx + 1).reduce((a, b) => a + b, 0);
-          handle.style.top = (rowAcc / totalRows) * 100 + "%";
-        }
+        const acc = colPerc.slice(0, idx + 1).reduce((a, b) => a + b, 0);
+        handle.style.left = (acc / totalCols) * 100 + "%";
+      });
+    }
+
+    if (centerRowHandles && centerRowHandles.length) {
+      const totalRows = centerRowPerc.reduce((a, b) => a + b, 0);
+      const leftOffset = colPerc[0];
+      const widthPerc = colPerc[1];
+      centerRowHandles.forEach(handle => {
+        const idx = Number(handle.dataset.index);
+        const rowAcc = centerRowPerc.slice(0, idx + 1).reduce((a, b) => a + b, 0);
+        handle.style.top = (rowAcc / totalRows) * 100 + "%";
+        handle.style.left = leftOffset + "%";
+        handle.style.right = (100 - leftOffset - widthPerc) + "%";
       });
     }
   }
@@ -157,9 +168,9 @@ var start = function() {
       const startX = e.clientX;
       const startY = e.clientY;
       const startCols = [...colPerc];
-      const startRows = [...rowPerc];
+      const startRows = [...centerRowPerc];
       const gridWidth = mainGrid ? mainGrid.clientWidth : window.innerWidth;
-      const gridHeight = mainGrid ? mainGrid.clientHeight : window.innerHeight;
+      const gridHeight = centerGrid ? centerGrid.clientHeight : window.innerHeight;
       function onMove(evt) {
         if (isCol) {
           const deltaPx = evt.clientX - startX;
@@ -177,15 +188,15 @@ var start = function() {
           let b = startRows[idx + 1] - deltaPercent;
           if (a < minRow) { b -= minRow - a; a = minRow; }
           if (b < minRow) { a -= minRow - b; b = minRow; }
-          rowPerc[idx] = a;
-          rowPerc[idx + 1] = b;
+          centerRowPerc[idx] = a;
+          centerRowPerc[idx + 1] = b;
         }
         const colTotal = colPerc.reduce((p, c) => p + c, 0);
-        const rowTotal = rowPerc.reduce((p, c) => p + c, 0);
+        const rowTotal = centerRowPerc.reduce((p, c) => p + c, 0);
         const colScale = 100 / colTotal;
         const rowScale = 100 / rowTotal;
         colPerc = colPerc.map(v => v * colScale);
-        rowPerc = rowPerc.map(v => v * rowScale);
+        centerRowPerc = centerRowPerc.map(v => v * rowScale);
         applyGrid();
         setWhiteboardSize();
         resizeAudioViz();
@@ -199,7 +210,8 @@ var start = function() {
     });
   }
 
-  resizeHandles.forEach(bindResize);
+  outerHandles.forEach(bindResize);
+  centerRowHandles.forEach(bindResize);
   window.addEventListener("resize", () => {
     applyGrid();
     setWhiteboardSize();
@@ -207,58 +219,8 @@ var start = function() {
   });
 
   function expandTile(tile) {
-    if (!tile) return;
-    const tiles = Array.from(document.querySelectorAll(".tile"));
-    const index = tiles.indexOf(tile);
-    if (index === -1) return;
-    const colIndex = index % 4;
-    const rowIndex = Math.floor(index / 4);
-
-    // toggle off
-    if (expandedTile === tile && savedPerc) {
-      colPerc = [...savedPerc.col];
-      rowPerc = [...savedPerc.row];
-      expandedTile = null;
-      savedPerc = null;
-      applyGrid();
-      setWhiteboardSize();
-      return;
-    }
-
-    savedPerc = { col: [...colPerc], row: [...rowPerc] };
-    expandedTile = tile;
-
-    let newCols;
-    if (colIndex === 3) {
-      newCols = [18, 18, 18, 46];
-    } else {
-      newCols = [15, 15, 15, 15];
-      newCols[colIndex] = 55;
-      newCols[3] = 15;
-    }
-
-    let newRows = [...rowPerc];
-    if (rowIndex === 0) {
-      newRows = [70, 30];
-    } else if (rowIndex === 1) {
-      newRows = [30, 70];
-    }
-
-    colPerc = newCols;
-    rowPerc = newRows;
-    applyGrid();
-    setWhiteboardSize();
-    resizeAudioViz();
+    return;
   }
-
-  document.querySelectorAll(".tile-head").forEach(head => {
-    head.addEventListener("dblclick", e => {
-      e.preventDefault();
-      e.stopPropagation();
-      const tile = head.closest(".tile");
-      expandTile(tile);
-    });
-  });
 
   //const peerInfo = byId("peer-info");
   //const noPeersCopy = peerInfo.innerText;
@@ -910,19 +872,13 @@ var start = function() {
       sendCmd({ peerId: selfId, cmd: "username", username: userName });
     }
 
-    // video circle attempt
-    var li = document.createElement("li");
-    li.className = "list-item";
-    li.id = "circle_" + id;
-    var inner_txt = document.createElement("p");
-    inner_txt.innerText = isSelf ? "you" : id.slice(0, 4);
-    inner_txt.className = "list-text";
-    inner_txt.id = "user_" + id;
-    li.appendChild(inner_txt);
-    //li.appendChild(video);
-    circle.appendChild(li);
-    updateLayout(circle);
-    
+    if (whoList) {
+      const li = document.createElement("li");
+      li.id = "who_" + id;
+      li.innerText = isSelf ? "you" : id.slice(0, 8);
+      whoList.appendChild(li);
+    }
+
     // are we sharing?
     if (screenSharing){
        console.log('wea re still screensharing!',screenSharing.id)
@@ -951,10 +907,9 @@ var start = function() {
       streams[id] = false;
     }
 
-    var li = byId("circle_" + id);
+    var li = byId("who_" + id);
     if (li && li.parentNode) {
-      circle.removeChild(li);
-      updateLayout();
+      li.parentNode.removeChild(li);
     }
 
     updatePeerInfo();
@@ -1230,35 +1185,6 @@ var start = function() {
   }
   window.reJoinRoom = reJoinRoom;
 
-  /* circle layout functions */
-
-  function updateLayout() {
-    var listItems = document.getElementsByClassName("list-item");
-    for (var i = 0; i < listItems.length; i++) {
-      var offsetAngle = 360 / listItems.length;
-      var rotateAngle = offsetAngle * i;
-      var el = byId(listItems[i].id);
-      el.style.transform =
-        "rotate(" +
-        rotateAngle +
-        "deg) translate(0, -80px) rotate(-" +
-        rotateAngle +
-        "deg)";
-    }
-  }
-
-  function addCircle(item) {
-    var list = document.getElementById("list");
-    list.append(item);
-  }
-
-  var deleteCircle = function(e) {
-    var list = document.getElementById("list");
-    e.parent().remove();
-  };
-  
-  
-  
 };
 
 start();

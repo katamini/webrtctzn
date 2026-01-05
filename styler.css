@@ -476,8 +476,8 @@ body {
 
 .main-grid {
   display: grid;
-  grid-template-columns: var(--col-1, 25%) var(--col-2, 25%) var(--col-3, 25%) var(--col-4, 25%);
-  grid-template-rows: var(--row-1, 50%) var(--row-2, 50%);
+  grid-template-columns: var(--col-1, 20%) var(--col-2, 55%) var(--col-3, 25%);
+  grid-template-rows: 1fr;
   gap: 0;
   height: calc(100vh - 16px);
   width: 100%;
@@ -717,6 +717,17 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
+.resize-layer.center-row {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.resize-layer.center-row .row {
+  left: 0;
+  right: 0;
+}
+
 .list-ring {
   flex: 1;
   position: relative;
@@ -729,23 +740,48 @@ body {
 .tile.draw { background: #1e1e1e; }
 .tile.file { background: #000; }
 .tile.settings { background: #525252; }
+.tile.who { background: #575757; }
 
-#list {
-  position: absolute;
-  inset: 0;
-  width: 100%;
+.col-left {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 6px;
+}
+
+.col-left .voice {
+  min-height: 120px;
+}
+
+.col-center {
+  position: relative;
+}
+
+.center-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: var(--c-row-1, 65%) var(--c-row-2, 35%);
+  gap: 6px;
   height: 100%;
-  top: 0;
-  left: 0;
 }
 
-.list-item {
-  left: 50%;
-  top: 50%;
+.center-grid .draw {
+  grid-column: 1 / span 2;
 }
 
-.list-text {
-  color: #dcdcdc;
+.col-right {
+  display: grid;
+  grid-template-rows: 2fr 1fr 1fr;
+  gap: 6px;
+}
+
+.who-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
 }
 
 @media (max-width: 980px) {
