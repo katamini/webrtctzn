@@ -549,30 +549,29 @@ var start = function() {
         sendCmd({ peerId: selfId, cmd: "username", username: userName }, joiningPeerId);
       }
       
-      // Small delay to ensure peer connection is established before sending streams
-      setTimeout(() => {
-        // Send existing stream to new peer (Trystero best practice)
-        if (streaming) {
-          console.log('Sending media stream to new peer:', joiningPeerId);
-          room.addStream(streaming, joiningPeerId);
-          // Also send the hand command to indicate streaming state
-          if (sendCmd) {
-            sendCmd({ peerId: peerId, cmd: "hand", state: true }, joiningPeerId);
-          }
+      // Send existing stream to new peer (Trystero best practice)
+      // Call addStream directly without delay - Trystero handles connection setup
+      if (streaming) {
+        console.log('Sending media stream to new peer:', joiningPeerId);
+        room.addStream(streaming, joiningPeerId);
+        // Also send the hand command to indicate streaming state
+        if (sendCmd) {
+          sendCmd({ peerId: peerId, cmd: "hand", state: true }, joiningPeerId);
         }
-        // Send screenshare to new peer if active
-        if (screenSharing) {
-          console.log('Sending screen share to new peer:', joiningPeerId);
-          room.addStream(screenSharing, joiningPeerId);
-          if (sendCmd) {
-            sendCmd({
-              peerId: selfId + "_screen",
-              cmd: "screenshare",
-              stream: screenSharing.id
-            }, joiningPeerId);
-          }
+      }
+      
+      // Send screenshare to new peer if active
+      if (screenSharing) {
+        console.log('Sending screen share to new peer:', joiningPeerId);
+        room.addStream(screenSharing, joiningPeerId);
+        if (sendCmd) {
+          sendCmd({
+            peerId: selfId + "_screen",
+            cmd: "screenshare",
+            stream: screenSharing.id
+          }, joiningPeerId);
         }
-      }, 200);
+      }
     });
     room.onPeerLeave(removeCursor);
     room.onPeerStream(handleStream);
@@ -769,19 +768,27 @@ var start = function() {
         if (data.focus) {
           // handle focus
           var el = byId("cursor_" + id);
-          if (el && data.focus == "hidden") el.classList.add("handoff");
-          else if (el) el.classList.remove("handoff");
-          var el = byId("circle_" + id);
-          if (el && data.focus == "hidden") el.classList.add("handoff");
-          else if (el) el.classList.remove("handoff");
+          if (el) {
+            if (data.focus == "hidden") el.classList.add("handoff");
+            else el.classList.remove("handoff");
+          }
+          el = byId("circle_" + id);
+          if (el) {
+            if (data.focus == "hidden") el.classList.add("handoff");
+            else el.classList.remove("handoff");
+          }
         } else {
           // handle state
           var el = byId("hand_" + id);
-          if (el && data.state) el.classList.add("handgreen");
-          else if (el) el.classList.remove("handgreen");
-          var el = byId("circle_" + id);
-          if (el && data.state) el.classList.add("handgreen");
-          else if (el) el.classList.remove("handgreen");
+          if (el) {
+            if (data.state) el.classList.add("handgreen");
+            else el.classList.remove("handgreen");
+          }
+          el = byId("circle_" + id);
+          if (el) {
+            if (data.state) el.classList.add("handgreen");
+            else el.classList.remove("handgreen");
+          }
         }
       } else if (data.cmd == "username" && data.username) {
         var el = byId("name_" + id);
