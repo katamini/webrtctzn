@@ -541,26 +541,38 @@ var start = function() {
 
     byId("room-num").innerText = "#" + n;
     room.onPeerJoin(joiningPeerId => {
+      console.log('Peer joined:', joiningPeerId);
       addCursor(joiningPeerId);
-      // Send existing stream to new peer (Trystero best practice)
-      if (streaming) {
-        room.addStream(streaming, joiningPeerId);
-        // Also send the hand command to indicate streaming state
-        if (sendCmd) {
-          sendCmd({ peerId: peerId, cmd: "hand", state: true }, joiningPeerId);
-        }
+      
+      // Send username immediately to new peer
+      if (userName && sendCmd) {
+        sendCmd({ peerId: selfId, cmd: "username", username: userName }, joiningPeerId);
       }
-      // Send screenshare to new peer if active
-      if (screenSharing) {
-        room.addStream(screenSharing, joiningPeerId);
-        if (sendCmd) {
-          sendCmd({
-            peerId: selfId + "_screen",
-            cmd: "screenshare",
-            stream: screenSharing.id
-          }, joiningPeerId);
+      
+      // Small delay to ensure peer connection is established before sending streams
+      setTimeout(() => {
+        // Send existing stream to new peer (Trystero best practice)
+        if (streaming) {
+          console.log('Sending media stream to new peer:', joiningPeerId);
+          room.addStream(streaming, joiningPeerId);
+          // Also send the hand command to indicate streaming state
+          if (sendCmd) {
+            sendCmd({ peerId: peerId, cmd: "hand", state: true }, joiningPeerId);
+          }
         }
-      }
+        // Send screenshare to new peer if active
+        if (screenSharing) {
+          console.log('Sending screen share to new peer:', joiningPeerId);
+          room.addStream(screenSharing, joiningPeerId);
+          if (sendCmd) {
+            sendCmd({
+              peerId: selfId + "_screen",
+              cmd: "screenshare",
+              stream: screenSharing.id
+            }, joiningPeerId);
+          }
+        }
+      }, 200);
     });
     room.onPeerLeave(removeCursor);
     room.onPeerStream(handleStream);
@@ -758,18 +770,18 @@ var start = function() {
           // handle focus
           var el = byId("cursor_" + id);
           if (el && data.focus == "hidden") el.classList.add("handoff");
-          else el.classList.remove("handoff");
+          else if (el) el.classList.remove("handoff");
           var el = byId("circle_" + id);
           if (el && data.focus == "hidden") el.classList.add("handoff");
-          else el.classList.remove("handoff");
+          else if (el) el.classList.remove("handoff");
         } else {
           // handle state
           var el = byId("hand_" + id);
           if (el && data.state) el.classList.add("handgreen");
-          else el.classList.remove("handgreen");
+          else if (el) el.classList.remove("handgreen");
           var el = byId("circle_" + id);
           if (el && data.state) el.classList.add("handgreen");
-          else el.classList.remove("handgreen");
+          else if (el) el.classList.remove("handgreen");
         }
       } else if (data.cmd == "username" && data.username) {
         var el = byId("name_" + id);
@@ -899,8 +911,10 @@ var start = function() {
   }
 
   function removeCursor(id) {
+    console.log('Peer left:', id);
     if (cursors[id]) {
       canvas.removeChild(cursors[id]);
+      delete cursors[id];
     }
     const vid = byId("vid_" + id);
     if (vid && vid.parentNode) {
@@ -908,7 +922,12 @@ var start = function() {
     }
     if (streams[id]) {
       room.removeStream(streams[id], id);
-      streams[id] = false;
+      delete streams[id];
+    }
+    
+    // Clean up peer health tracking
+    if (peerHealthStatus[id]) {
+      delete peerHealthStatus[id];
     }
 
     var li = byId("who_" + id);
