@@ -61,6 +61,11 @@ var start = function() {
   const videoFeed = byId("video-feed");
   const chatSend = byId("chat-send");
   const audioViz = byId("audio-visualizer");
+  const tiles = Array.from(document.querySelectorAll(".tile"));
+  const mobileTabs = document.querySelectorAll(".mobile-tab");
+  const mobileQuery = window.matchMedia("(max-width: 980px)");
+  let isMobile = mobileQuery.matches;
+  let activeMobile = "chat";
   const whoList = null;
 
   const circle = null;
@@ -204,7 +209,47 @@ var start = function() {
 }
 applyGrid();
 
+  function setMobileActive(target) {
+    if (!isMobile) return;
+    if (!target) target = activeMobile || "chat";
+    activeMobile = target;
+    tiles.forEach(tile => {
+      if (tile.dataset.tile === target) tile.classList.add("mobile-active");
+      else tile.classList.remove("mobile-active");
+    });
+    mobileTabs.forEach(tab => {
+      tab.classList.toggle("active", tab.dataset.target === target);
+    });
+  }
+
+  if (isMobile) {
+    setMobileActive(activeMobile);
+  }
+
+  mobileQuery.addEventListener("change", e => {
+    isMobile = e.matches;
+    if (isMobile) {
+      setMobileActive(activeMobile || "chat");
+    } else {
+      tiles.forEach(tile => tile.classList.remove("mobile-active"));
+      mobileTabs.forEach(tab => tab.classList.remove("active"));
+    }
+  });
+
+  mobileTabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      activeMobile = tab.dataset.target;
+      setMobileActive(activeMobile);
+    });
+  });
+
   function expandTile(tile) {
+    if (isMobile) {
+      if (tile && tile.dataset.tile) {
+        setMobileActive(tile.dataset.tile);
+      }
+      return;
+    }
     if (!tile) return;
     const tiles = Array.from(document.querySelectorAll(".tile"));
     const idx = tiles.indexOf(tile);
@@ -307,6 +352,13 @@ applyGrid();
       e.stopPropagation();
       const tile = head.closest(".tile");
       expandTile(tile);
+    });
+    head.addEventListener("click", () => {
+      if (!isMobile) return;
+      const tile = head.closest(".tile");
+      if (tile && tile.dataset.tile) {
+        setMobileActive(tile.dataset.tile);
+      }
     });
   });
 
