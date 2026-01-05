@@ -23,11 +23,13 @@ Audio & Video Chat, Whiteboarding, Image and Screensharing with a minimal interf
 
 The application implements robust connection handling:
 
+- **Session Persistence**: Automatically restores your streaming state when you reload the page
 - **Automatic Stream Recovery**: Streams automatically reconnect on errors or disconnections
 - **Health Monitoring**: Peer connections are monitored every 30 seconds with keepalive pings
 - **Smart Reconnection**: Degraded connections are automatically reinitialized
 - **New Peer Handling**: Existing streams are automatically sent to peers joining late
 - **Error Recovery**: Graceful handling of media device failures with user notifications
+- **Preference Memory**: Remembers your video/audio preferences across sessions
 
 #### URL Parameters
 ```
