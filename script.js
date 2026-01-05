@@ -85,6 +85,21 @@ var start = function() {
     features.video = savedVideoPreference === "true";
   }
 
+  const getMediaConstraints = () => {
+    const baseVideo = {
+      width: { ideal: 1280, max: 1920 },
+      height: { ideal: 720, max: 1080 },
+      frameRate: { ideal: 30, max: 30 }
+    };
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (conn && conn.downlink && conn.downlink < 1.5) {
+      baseVideo.width = { ideal: 640, max: 1280 };
+      baseVideo.height = { ideal: 360, max: 720 };
+      baseVideo.frameRate = { ideal: 24, max: 24 };
+    }
+    return { audio: true, video: features.video ? baseVideo : false };
+  };
+
   document.addEventListener("visibilitychange", function(event) {
     if (sendCmd) {
       sendCmd({ peerId: peerId, cmd: "hand", focus: document.visibilityState });
@@ -555,7 +570,7 @@ applyGrid();
   // Helper function to start streaming with common setup
   async function startStreaming(autoReconnect = false) {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia(features);
+      const stream = await navigator.mediaDevices.getUserMedia(getMediaConstraints());
       room.addStream(stream);
       handleStream(stream, selfId);
       streaming = stream;
