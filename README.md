@@ -2,12 +2,8 @@
 
 #### Decentralized p2p dWebRTC for CTZN with multi-network peer discovery.
 
-## [Try It](https://rtctzn.com)
+## [Try It](https://katamini.github.io/webrtctzn/)
 Audio & Video Chat, Whiteboarding, Image and Screensharing with a minimal interface.
-
-
-
-![ezgif com-gif-maker (20)](https://user-images.githubusercontent.com/1423657/111086318-bad40380-851b-11eb-84b9-5246f1f08bc7.gif)
 
 ## Features
 
@@ -40,7 +36,7 @@ The application implements robust connection handling:
 
 #### Embedding
 ```html
-<iframe src="https://meething.github.io/webrtctzn/?room=mycustomtag"
+<iframe src="https://katamini.github.io/webrtctzn/?room=mycustomtag"
   width="100%" height="100%" frameBorder="0" allowusermedia 
   allow="microphone; camera; encrypted-media;">
 </iframe>
