@@ -67,6 +67,7 @@ var start = function() {
   let isMobile = mobileQuery.matches;
   let activeMobile = "chat";
   const whoList = null;
+  const peerAvatar = {};
 
   const circle = null;
   const chat = byId("chat");
@@ -383,6 +384,19 @@ applyGrid();
   const config = { appId: "ctzn-glitch" };
   const cursors = {};
   const roomCap = 33;
+  const avatars = [
+    "static/avatars/avatar_01.png",
+    "static/avatars/avatar_02.png",
+    "static/avatars/avatar_03.png",
+    "static/avatars/avatar_04.png",
+    "static/avatars/avatar_05.png",
+    "static/avatars/avatar_06.png",
+    "static/avatars/avatar_07.png",
+    "static/avatars/avatar_08.png",
+    "static/avatars/avatar_09.png",
+    "static/avatars/avatar_10.png"
+  ];
+  const peerAvatar = {};
 
   let mouseX = 0;
   let mouseY = 0;
@@ -961,9 +975,13 @@ applyGrid();
       if (data.cmd == "stop_video" && data.peerId) {
         var el = byId("vid_" + id);
         if (el) el.srcObject = null;
+        const av = byId("avatar_" + id);
+        if (av) av.style.display = "flex";
         // which one is it? :)
         el = byId("vid_" + peerId);
         if (el) el.srcObject = null;
+        const av2 = byId("avatar_" + peerId);
+        if (av2) av2.style.display = "flex";
       } else if (data.cmd == "hand") {
         if (data.focus) {
           // handle focus
@@ -1033,6 +1051,8 @@ applyGrid();
         el.setAttribute("height", 240);
         el.setAttribute("width", 480);
         el.srcObject = stream;
+        const av = byId("avatar_" + peerId);
+        if (av) av.style.display = stream ? "none" : "flex";
       }, 200);
     }
   }
@@ -1071,10 +1091,19 @@ applyGrid();
       const frame = document.createElement("div");
       frame.className = "video-frame";
       frame.id = "frame_" + id;
+      const avatarWrap = document.createElement("div");
+      avatarWrap.className = "video-avatar";
+      const avatarImg = document.createElement("img");
+      const pick = avatars[Math.floor(Math.random() * avatars.length)];
+      peerAvatar[id] = pick;
+      avatarImg.src = pick;
+      avatarWrap.appendChild(avatarImg);
       const label = document.createElement("div");
       label.className = "video-label";
       label.id = "label_" + id;
       label.innerText = isSelf ? (userName || "you") : id.slice(0, 8);
+      avatarWrap.id = "avatar_" + id;
+      frame.appendChild(avatarWrap);
       frame.appendChild(video);
       frame.appendChild(label);
       videoFeed.appendChild(frame);
@@ -1115,6 +1144,8 @@ applyGrid();
     if (vid && vid.parentNode) {
       vid.parentNode.removeChild(vid);
     }
+    const av = byId("avatar_" + id);
+    if (av && av.parentNode) av.parentNode.removeChild(av);
     if (streams[id]) {
       room.removeStream(streams[id], id);
       delete streams[id];
