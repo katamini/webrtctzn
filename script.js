@@ -55,7 +55,8 @@ var start = function() {
   const ctx = whiteboard.getContext("2d");
   const drawSurface = byId("draw-surface");
   const mainGrid = byId("main-grid");
-  const outerHandles = document.querySelectorAll(".resize-layer.outer .resize-handle.col");
+  const colHandlesTop = document.querySelectorAll('.resize-layer.outer .resize-handle.col[data-row="top"]');
+  const colHandlesBottom = document.querySelectorAll('.resize-layer.outer .resize-handle.col[data-row="bottom"]');
   const rowHandles = document.querySelectorAll(".resize-layer.outer .resize-handle.row");
   const videoToggle = byId("video-toggle");
   const videoFeed = byId("video-feed");
@@ -244,9 +245,11 @@ var start = function() {
     draw();
   }
 
-  const defaultColPerc = [25, 25, 25, 25];
+  const defaultColPercTop = [25, 25, 25, 25];
+  const defaultColPercBottom = [25, 25, 25, 25];
   const defaultRowPerc = [60, 40];
-  let colPerc = [...defaultColPerc];
+  let colPercTop = [...defaultColPercTop];
+  let colPercBottom = [...defaultColPercBottom];
   let rowPerc = [...defaultRowPerc];
   const minCol = 10;
   const minRow = 15;
@@ -261,32 +264,50 @@ var start = function() {
 
   function applyGrid() {
     if (mainGrid) {
-      mainGrid.style.setProperty("--col-1", colPerc[0] + "%");
-      mainGrid.style.setProperty("--col-2", colPerc[1] + "%");
-      mainGrid.style.setProperty("--col-3", colPerc[2] + "%");
-      mainGrid.style.setProperty("--col-4", colPerc[3] + "%");
+      mainGrid.style.setProperty("--top-col-1", colPercTop[0] + "%");
+      mainGrid.style.setProperty("--top-col-2", colPercTop[1] + "%");
+      mainGrid.style.setProperty("--top-col-3", colPercTop[2] + "%");
+      mainGrid.style.setProperty("--top-col-4", colPercTop[3] + "%");
+      mainGrid.style.setProperty("--bot-col-1", colPercBottom[0] + "%");
+      mainGrid.style.setProperty("--bot-col-2", colPercBottom[1] + "%");
+      mainGrid.style.setProperty("--bot-col-3", colPercBottom[2] + "%");
+      mainGrid.style.setProperty("--bot-col-4", colPercBottom[3] + "%");
       mainGrid.style.setProperty("--row-1", rowPerc[0] + "%");
       mainGrid.style.setProperty("--row-2", rowPerc[1] + "%");
     }
 
-    if (outerHandles && outerHandles.length) {
-      const totalCols = colPerc.reduce((a, b) => a + b, 0);
-      outerHandles.forEach(handle => {
+    const totalRows = rowPerc.reduce((a, b) => a + b, 0);
+    const topHeight = (rowPerc[0] / totalRows) * 100;
+    const botHeight = (rowPerc[1] / totalRows) * 100;
+    if (colHandlesTop && colHandlesTop.length) {
+      const totalCols = colPercTop.reduce((a, b) => a + b, 0);
+      colHandlesTop.forEach(handle => {
         const idx = Number(handle.dataset.index);
-        const acc = colPerc.slice(0, idx + 1).reduce((a, b) => a + b, 0);
+        const acc = colPercTop.slice(0, idx + 1).reduce((a, b) => a + b, 0);
         handle.style.left = (acc / totalCols) * 100 + "%";
+        handle.style.top = "0%";
+        handle.style.height = topHeight + "%";
+      });
+    }
+    if (colHandlesBottom && colHandlesBottom.length) {
+      const totalCols = colPercBottom.reduce((a, b) => a + b, 0);
+      colHandlesBottom.forEach(handle => {
+        const idx = Number(handle.dataset.index);
+        const acc = colPercBottom.slice(0, idx + 1).reduce((a, b) => a + b, 0);
+        handle.style.left = (acc / totalCols) * 100 + "%";
+        handle.style.top = topHeight + "%";
+        handle.style.height = botHeight + "%";
       });
     }
 
-  if (rowHandles && rowHandles.length) {
-    const totalRows = rowPerc.reduce((a, b) => a + b, 0);
-    rowHandles.forEach(handle => {
-      const idx = Number(handle.dataset.index);
-      const rowAcc = rowPerc.slice(0, idx + 1).reduce((a, b) => a + b, 0);
-      handle.style.top = (rowAcc / totalRows) * 100 + "%";
-    });
+    if (rowHandles && rowHandles.length) {
+      rowHandles.forEach(handle => {
+        const idx = Number(handle.dataset.index);
+        const rowAcc = rowPerc.slice(0, idx + 1).reduce((a, b) => a + b, 0);
+        handle.style.top = (rowAcc / totalRows) * 100 + "%";
+      });
+    }
   }
-}
 applyGrid();
 
   function setMobileActive(target) {
@@ -339,7 +360,8 @@ applyGrid();
     const rowIdx = Math.floor(idx / 4);
 
     if (expandedTile === tile && savedPerc) {
-      colPerc = [...savedPerc.col];
+      colPercTop = [...savedPerc.top];
+      colPercBottom = [...savedPerc.bottom];
       rowPerc = [...savedPerc.row];
       expandedTile = null;
       savedPerc = null;
@@ -349,15 +371,22 @@ applyGrid();
       return;
     }
 
-    savedPerc = { col: [...colPerc], row: [...rowPerc] };
+    savedPerc = { top: [...colPercTop], bottom: [...colPercBottom], row: [...rowPerc] };
     expandedTile = tile;
 
     const small = 15;
     const large = 55;
-    colPerc = [small, small, small, small];
-    colPerc[colIdx] = large;
-    const colTotal = colPerc.reduce((a, b) => a + b, 0);
-    colPerc = colPerc.map(v => (v / colTotal) * 100);
+    if (rowIdx === 0) {
+      colPercTop = [small, small, small, small];
+      colPercTop[colIdx] = large;
+      const colTotal = colPercTop.reduce((a, b) => a + b, 0);
+      colPercTop = colPercTop.map(v => (v / colTotal) * 100);
+    } else {
+      colPercBottom = [small, small, small, small];
+      colPercBottom[colIdx] = large;
+      const colTotal = colPercBottom.reduce((a, b) => a + b, 0);
+      colPercBottom = colPercBottom.map(v => (v / colTotal) * 100);
+    }
 
     if (rowIdx === 0) {
       rowPerc = [75, 25];
@@ -377,7 +406,8 @@ applyGrid();
       e.preventDefault();
       const startX = e.clientX;
       const startY = e.clientY;
-      const startCols = [...colPerc];
+      const whichRow = handle.dataset.row || "top";
+      const startCols = whichRow === "bottom" ? [...colPercBottom] : [...colPercTop];
       const startRows = [...rowPerc];
       const gridWidth = mainGrid ? mainGrid.clientWidth : window.innerWidth;
       const gridHeight = mainGrid ? mainGrid.clientHeight : window.innerHeight;
@@ -389,8 +419,19 @@ applyGrid();
           let b = startCols[idx + 1] - deltaPercent;
           if (a < minCol) { b -= minCol - a; a = minCol; }
           if (b < minCol) { a -= minCol - b; b = minCol; }
-          colPerc[idx] = a;
-          colPerc[idx + 1] = b;
+          if (whichRow === "bottom") {
+            colPercBottom[idx] = a;
+            colPercBottom[idx + 1] = b;
+            const colTotal = colPercBottom.reduce((p, c) => p + c, 0);
+            const colScale = 100 / colTotal;
+            colPercBottom = colPercBottom.map(v => v * colScale);
+          } else {
+            colPercTop[idx] = a;
+            colPercTop[idx + 1] = b;
+            const colTotal = colPercTop.reduce((p, c) => p + c, 0);
+            const colScale = 100 / colTotal;
+            colPercTop = colPercTop.map(v => v * colScale);
+          }
         } else {
           const deltaPx = evt.clientY - startY;
           const deltaPercent = (deltaPx / gridHeight) * 100;
@@ -401,11 +442,8 @@ applyGrid();
           rowPerc[idx] = a;
           rowPerc[idx + 1] = b;
         }
-        const colTotal = colPerc.reduce((p, c) => p + c, 0);
         const rowTotal = rowPerc.reduce((p, c) => p + c, 0);
-        const colScale = 100 / colTotal;
         const rowScale = 100 / rowTotal;
-        colPerc = colPerc.map(v => v * colScale);
         rowPerc = rowPerc.map(v => v * rowScale);
         applyGrid();
         setWhiteboardSize();
@@ -420,7 +458,8 @@ applyGrid();
     });
   }
 
-  outerHandles.forEach(bindResize);
+  colHandlesTop.forEach(bindResize);
+  colHandlesBottom.forEach(bindResize);
   rowHandles.forEach(bindResize);
   window.addEventListener("resize", () => {
     applyGrid();

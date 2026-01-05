@@ -449,17 +449,31 @@ body {
 
 .main-grid {
   display: grid;
-  grid-template-columns:
-    minmax(140px, var(--col-1, 25%))
-    minmax(140px, var(--col-2, 25%))
-    minmax(140px, var(--col-3, 25%))
-    minmax(140px, var(--col-4, 25%));
   grid-template-rows:
     minmax(220px, var(--row-1, 60%))
     minmax(200px, var(--row-2, 40%));
-  gap: 0;
+  grid-template-columns: 1fr;
   height: calc(100vh - 16px);
   width: 100%;
+}
+
+.row-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(140px, var(--top-col-1, 25%))
+    minmax(140px, var(--top-col-2, 25%))
+    minmax(140px, var(--top-col-3, 25%))
+    minmax(140px, var(--top-col-4, 25%));
+  gap: 0;
+  width: 100%;
+}
+
+.row-grid.row-bottom {
+  grid-template-columns:
+    minmax(140px, var(--bot-col-1, 25%))
+    minmax(140px, var(--bot-col-2, 25%))
+    minmax(140px, var(--bot-col-3, 25%))
+    minmax(140px, var(--bot-col-4, 25%));
 }
 
 .mobile-shell {

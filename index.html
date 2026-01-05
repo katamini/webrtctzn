@@ -49,139 +49,146 @@
       </div>
       <div class="grid-wrap">
         <div id="main-grid" class="main-grid">
-          <section class="tile chat" data-tile="chat">
-            <div class="tile-head">
-              <div class="tile-title">CHAT</div>
-            </div>
-            <div id="chat" class="chatp chat-log"></div>
-            <div class="chat-input-row">
-              <input
-                id="chatbox"
-                name="text"
-                type="text"
-                class="chatbox"
-                placeholder="type your message..."
-                autocomplete="off"
-              />
-              <button type="button" id="chat-send" class="ghost-btn">Send</button>
-            </div>
-          </section>
-
-          <section class="tile video" data-tile="video">
-            <div class="tile-head">
-              <div class="tile-title">WHO</div>
-              <button type="button" id="video-toggle" class="ghost-btn">Enable video</button>
-            </div>
-            <div id="video-feed" class="media-feed"></div>
-          </section>
-
-          <section class="tile screen" data-tile="screen">
-            <div class="tile-head">
-              <div class="tile-title">SCREEN</div>
-              <button title="Share your screen" type="button" id="share-screen" class="ghost-btn" onClick="shareScreen()">
-                <i class="fa fa-object-group" aria-hidden="true"></i>
-                <span>Share</span>
-              </button>
-            </div>
-            <div class="screen-view">
-              <video id="shareview" class="overtop" src="" autoplay></video>
-            </div>
-          </section>
-
-          <section class="tile draw" data-tile="draw">
-            <div class="tile-head">
-              <div class="tile-title">DRAW</div>
-              <div class="tile-actions">
-                <button title="Clear whiteboard" type="button" id="clear-button" class="ghost-btn" onClick="clearCanvas()">
-                  <i class="fa fa-rotate-left" aria-hidden="true"></i>
-                  <span>Clear</span>
-                </button>
+          <div class="row-grid row-top">
+            <section class="tile chat" data-tile="chat">
+              <div class="tile-head">
+                <div class="tile-title">CHAT</div>
               </div>
-            </div>
-            <div id="draw-surface" ondrop="drop(event)" ondragover="allowDrop(event)">
-              <canvas id="whiteboard"></canvas>
-            </div>
-            <div class="draw-tools">
-              <label for="favcolor">Color</label>
-              <input type="color" id="favcolor" class="favcolor" value="#c2c2c2" />
-            </div>
-          </section>
-
-          <section class="tile voice" data-tile="voice">
-            <div class="tile-head">
-              <div class="tile-title">VOICE</div>
-              <div class="tile-meta" id="room-num"></div>
-            </div>
-            <div class="tile-body">
-              <div class="controls-row">
-                <button title="Join / leave call" type="button" id="talkbutton" class="pill-btn">
-                  <i class="fa fa-phone fa-2x" aria-hidden="true"></i>
-                </button>
-                <button title="Mute / unmute" type="button" id="mutebutton" class="pill-btn" disabled>
-                  <i class="fa fa-microphone fa-2x" aria-hidden="true"></i>
-                </button>
-              </div>
-              <div class="audio-viz-wrap">
-                <canvas id="audio-visualizer" aria-hidden="true"></canvas>
-              </div>
-            </div>
-          </section>
-
-          <section class="tile file" data-tile="file">
-            <div class="tile-head">
-              <div class="tile-title">FILE</div>
-              <button type="button" id="share-button" class="ghost-btn" onClick="shareUrl()">
-                <i class="fa fa-share-alt" aria-hidden="true"></i>
-                <span>Copy link</span>
-              </button>
-            </div>
-            <div class="file-drop" id="file-drop" ondrop="drop(event)" ondragover="allowDrop(event)">
-              <p>Drop an image here to share to the board.</p>
-              <p class="hint">Drag & drop inside this tile.</p>
-            </div>
-          </section>
-
-          <section class="tile spacer" data-tile="experiment">
-            <div class="tile-head">
-              <div class="tile-title">YOUTUBE</div>
-            </div>
-            <div class="youtube-body">
-              <div class="youtube-input-row">
+              <div id="chat" class="chatp chat-log"></div>
+              <div class="chat-input-row">
                 <input
-                  id="youtube-input"
+                  id="chatbox"
                   name="text"
                   type="text"
-                  class="youtube-input"
-                  placeholder="Paste YouTube URL or video ID..."
+                  class="chatbox"
+                  placeholder="type your message..."
                   autocomplete="off"
                 />
-                <button type="button" id="youtube-load" class="ghost-btn">Load</button>
+                <button type="button" id="chat-send" class="ghost-btn">Send</button>
               </div>
-              <div id="youtube-player-container" class="youtube-player-container">
-                <div id="youtube-player"></div>
+            </section>
+
+            <section class="tile video" data-tile="video">
+              <div class="tile-head">
+                <div class="tile-title">WHO</div>
+                <button type="button" id="video-toggle" class="ghost-btn">Enable video</button>
               </div>
-            </div>
-          </section>
-          <section class="tile settings" data-tile="settings">
-            <div class="tile-head">
-              <div class="tile-title">SETTINGS</div>
-            </div>
-            <div class="who-body">
-              <div class="settings-body">
-                <button type="button" id="settings-button" class="ghost-btn" onClick="shareUrl()">Share room link</button>
-                <button type="button" class="ghost-btn" onClick="getUserName()">Change name</button>
-                <button type="button" class="ghost-btn" onClick="reJoinRoom()">Reconnect</button>
+              <div id="video-feed" class="media-feed"></div>
+            </section>
+
+            <section class="tile screen" data-tile="screen">
+              <div class="tile-head">
+                <div class="tile-title">SCREEN</div>
+                <button title="Share your screen" type="button" id="share-screen" class="ghost-btn" onClick="shareScreen()">
+                  <i class="fa fa-object-group" aria-hidden="true"></i>
+                  <span>Share</span>
+                </button>
               </div>
-              <img src="./logo.png" alt="OLTRA" class="who-logo" />
-            </div>
-          </section>
+              <div class="screen-view">
+                <video id="shareview" class="overtop" src="" autoplay></video>
+              </div>
+            </section>
+
+            <section class="tile draw" data-tile="draw">
+              <div class="tile-head">
+                <div class="tile-title">DRAW</div>
+                <div class="tile-actions">
+                  <button title="Clear whiteboard" type="button" id="clear-button" class="ghost-btn" onClick="clearCanvas()">
+                    <i class="fa fa-rotate-left" aria-hidden="true"></i>
+                    <span>Clear</span>
+                  </button>
+                </div>
+              </div>
+              <div id="draw-surface" ondrop="drop(event)" ondragover="allowDrop(event)">
+                <canvas id="whiteboard"></canvas>
+              </div>
+              <div class="draw-tools">
+                <label for="favcolor">Color</label>
+                <input type="color" id="favcolor" class="favcolor" value="#c2c2c2" />
+              </div>
+            </section>
+          </div>
+
+          <div class="row-grid row-bottom">
+            <section class="tile voice" data-tile="voice">
+              <div class="tile-head">
+                <div class="tile-title">VOICE</div>
+                <div class="tile-meta" id="room-num"></div>
+              </div>
+              <div class="tile-body">
+                <div class="controls-row">
+                  <button title="Join / leave call" type="button" id="talkbutton" class="pill-btn">
+                    <i class="fa fa-phone fa-2x" aria-hidden="true"></i>
+                  </button>
+                  <button title="Mute / unmute" type="button" id="mutebutton" class="pill-btn" disabled>
+                    <i class="fa fa-microphone fa-2x" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <div class="audio-viz-wrap">
+                  <canvas id="audio-visualizer" aria-hidden="true"></canvas>
+                </div>
+              </div>
+            </section>
+
+            <section class="tile file" data-tile="file">
+              <div class="tile-head">
+                <div class="tile-title">FILE</div>
+                <button type="button" id="share-button" class="ghost-btn" onClick="shareUrl()">
+                  <i class="fa fa-share-alt" aria-hidden="true"></i>
+                  <span>Copy link</span>
+                </button>
+              </div>
+              <div class="file-drop" id="file-drop" ondrop="drop(event)" ondragover="allowDrop(event)">
+                <p>Drop an image here to share to the board.</p>
+                <p class="hint">Drag & drop inside this tile.</p>
+              </div>
+            </section>
+
+            <section class="tile spacer" data-tile="experiment">
+              <div class="tile-head">
+                <div class="tile-title">YOUTUBE</div>
+              </div>
+              <div class="youtube-body">
+                <div class="youtube-input-row">
+                  <input
+                    id="youtube-input"
+                    name="text"
+                    type="text"
+                    class="youtube-input"
+                    placeholder="Paste YouTube URL or video ID..."
+                    autocomplete="off"
+                  />
+                  <button type="button" id="youtube-load" class="ghost-btn">Load</button>
+                </div>
+                <div id="youtube-player-container" class="youtube-player-container">
+                  <div id="youtube-player"></div>
+                </div>
+              </div>
+            </section>
+            <section class="tile settings" data-tile="settings">
+              <div class="tile-head">
+                <div class="tile-title">SETTINGS</div>
+              </div>
+              <div class="who-body">
+                <div class="settings-body">
+                  <button type="button" id="settings-button" class="ghost-btn" onClick="shareUrl()">Share room link</button>
+                  <button type="button" class="ghost-btn" onClick="getUserName()">Change name</button>
+                  <button type="button" class="ghost-btn" onClick="reJoinRoom()">Reconnect</button>
+                </div>
+                <img src="./logo.png" alt="OLTRA" class="who-logo" />
+              </div>
+            </section>
+          </div>
           <div id="peer-grid" style="display:none;"></div>
         </div>
 
         <div class="resize-layer outer">
-          <div class="resize-handle col" data-index="0"></div>
-          <div class="resize-handle col" data-index="1"></div>
-          <div class="resize-handle col" data-index="2"></div>
+          <div class="resize-handle col" data-row="top" data-index="0"></div>
+          <div class="resize-handle col" data-row="top" data-index="1"></div>
+          <div class="resize-handle col" data-row="top" data-index="2"></div>
+          <div class="resize-handle col" data-row="bottom" data-index="0"></div>
+          <div class="resize-handle col" data-row="bottom" data-index="1"></div>
+          <div class="resize-handle col" data-row="bottom" data-index="2"></div>
           <div class="resize-handle row" data-index="0"></div>
         </div>
       </div>
