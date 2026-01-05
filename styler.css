@@ -530,8 +530,8 @@ body {
 }
 
 .audio-viz-wrap {
-  background: #0a0a0a;
-  border: 1px solid #1b1b1b;
+  background: transparent;
+  border: none;
   border-radius: 6px;
   height: 90px;
   overflow: hidden;
