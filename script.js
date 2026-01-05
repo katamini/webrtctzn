@@ -27,6 +27,12 @@ var start = function() {
   const shareView = byId("shareview");
   const peerGrid = byId("peer-grid");
   var features = { audio: true, video: false };
+  
+  // Restore video preference from localStorage if available
+  const savedVideoPreference = localStorage.getItem("videoPreference");
+  if (savedVideoPreference !== null) {
+    features.video = savedVideoPreference === "true";
+  }
 
   document.addEventListener("visibilitychange", function(event) {
     if (sendCmd) {
@@ -317,6 +323,9 @@ var start = function() {
     }
   }
 
+  // Store room name in localStorage for reconnection
+  localStorage.setItem("lastRoom", roomName);
+
   // reformat URL for easy sharing
   var refresh =
       window.location.protocol +
@@ -435,6 +444,8 @@ var start = function() {
   if (videoToggle) {
     videoToggle.addEventListener("click", () => {
       features.video = !features.video;
+      // Save video preference to localStorage
+      localStorage.setItem("videoPreference", features.video.toString());
       updateVideoToggle();
       if (streaming) {
         videoToggle.title = "Video preference will apply on the next call.";
@@ -457,6 +468,8 @@ var start = function() {
           ? '<i class="fa fa-phone fa-2x" aria-hidden="true" style="color:white;"></i>'
           : '<i class="fa fa-video fa-2x" aria-hidden="true" style="color:white;"></i>';
         talkbutton.style.background = "red";
+        // Save streaming state for auto-reconnect
+        localStorage.setItem("wasStreaming", "true");
         // notify network
         if (sendCmd) {
           sendCmd({ peerId: peerId, cmd: "hand", state: true });
@@ -474,6 +487,8 @@ var start = function() {
       var el = byId("vid_" + selfId);
       el.srcObject = null;
       streaming = null;
+      // Clear streaming state - user manually disconnected
+      localStorage.removeItem("wasStreaming");
       // reset mute
       mutebutton.innerHTML =
         '<i class="fa fa-microphone fa-2x" aria-hidden="true"></i>';
@@ -564,11 +579,54 @@ var start = function() {
     
     // Setup stream health monitoring and keepalive
     setupStreamHealthMonitoring();
+    
+    // Auto-reconnect if user was previously streaming
+    setTimeout(() => {
+      attemptAutoReconnect();
+    }, 500);
   }
   
   // Stream health monitoring with keepalive pings
   let healthCheckInterval = null;
   let peerHealthStatus = {};
+  
+  // Auto-reconnect function to restore previous streaming state
+  async function attemptAutoReconnect() {
+    const wasStreaming = localStorage.getItem("wasStreaming");
+    const lastRoom = localStorage.getItem("lastRoom");
+    
+    // Only auto-reconnect if:
+    // 1. User was streaming in their last session
+    // 2. They're rejoining the same room
+    // 3. They're not already streaming
+    if (wasStreaming === "true" && lastRoom === roomName && !streaming) {
+      console.log("Auto-reconnecting to previous stream...");
+      try {
+        // Simulate click on talk button to start stream
+        const stream = await navigator.mediaDevices.getUserMedia(features);
+        room.addStream(stream);
+        handleStream(stream, selfId);
+        streaming = stream;
+        startAudioViz(stream);
+        monitorStreamHealth(stream, 'media');
+        muted = false;
+        talkbutton.innerHTML = !features.video
+          ? '<i class="fa fa-phone fa-2x" aria-hidden="true" style="color:white;"></i>'
+          : '<i class="fa fa-video fa-2x" aria-hidden="true" style="color:white;"></i>';
+        talkbutton.style.background = "red";
+        // notify network
+        if (sendCmd) {
+          sendCmd({ peerId: peerId, cmd: "hand", state: true });
+        }
+        mutebutton.disabled = false;
+        console.log("Auto-reconnection successful");
+      } catch (error) {
+        console.error('Auto-reconnection failed:', error);
+        // Clear the flag if auto-reconnect fails
+        localStorage.removeItem("wasStreaming");
+      }
+    }
+  }
   
   function setupStreamHealthMonitoring() {
     if (healthCheckInterval) {
