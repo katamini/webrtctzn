@@ -30,6 +30,12 @@ var start = function() {
   const shareView = byId("shareview");
   const peerGrid = byId("peer-grid");
   var features = { audio: true, video: false };
+  
+  // Restore video preference from localStorage if available
+  const savedVideoPreference = localStorage.getItem("videoPreference");
+  if (savedVideoPreference !== null) {
+    features.video = savedVideoPreference === "true";
+  }
 
   document.addEventListener("visibilitychange", function(event) {
     if (sendCmd) {
@@ -254,13 +260,19 @@ var start = function() {
     getRoomName();
     return; // Exit early - getRoomName will redirect the page
   }
-  if (urlParams.has("video") || features.video) {
+  // URL parameters override localStorage preferences
+  if (urlParams.has("video")) {
     features.video = true;
     talkbutton.innerHTML =
       '<i class="fa fa-video fa-2x" aria-hidden="true"></i>';
   }
   if (urlParams.has("audio")) {
     features.video = false;
+    talkbutton.innerHTML =
+      '<i class="fa fa-phone fa-2x" aria-hidden="true"></i>';
+  }
+  // Update button icon based on current video preference
+  if (!urlParams.has("video") && !urlParams.has("audio") && features.video) {
     talkbutton.innerHTML =
       '<i class="fa fa-video fa-2x" aria-hidden="true"></i>';
   }
@@ -278,6 +290,9 @@ var start = function() {
       //localStorage.setItem("username", userName);
     }
   }
+
+  // Store room name in localStorage for reconnection
+  localStorage.setItem("lastRoom", roomName);
 
   // reformat URL for easy sharing
   var refresh =
@@ -387,6 +402,46 @@ var start = function() {
 
   var streaming = false;
   var muted = false;
+  
+  // Helper function to start streaming with common setup
+  async function startStreaming(autoReconnect = false) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(features);
+      room.addStream(stream);
+      handleStream(stream, selfId);
+      streaming = stream;
+      startAudioViz(stream);
+      monitorStreamHealth(stream, 'media');
+      muted = false;
+      talkbutton.innerHTML = !features.video
+        ? '<i class="fa fa-phone fa-2x" aria-hidden="true" style="color:white;"></i>'
+        : '<i class="fa fa-video fa-2x" aria-hidden="true" style="color:white;"></i>';
+      talkbutton.style.background = "red";
+      // Save streaming state for auto-reconnect
+      localStorage.setItem("wasStreaming", "true");
+      // notify network
+      if (sendCmd) {
+        sendCmd({ peerId: peerId, cmd: "hand", state: true });
+      }
+      mutebutton.disabled = false;
+      
+      if (autoReconnect) {
+        console.log("Auto-reconnection successful");
+        notifyMe("Automatically reconnected to your previous call");
+      }
+      return true;
+    } catch (error) {
+      console.error('Failed to get user media:', error);
+      if (autoReconnect) {
+        // Clear the flag if auto-reconnect fails
+        localStorage.removeItem("wasStreaming");
+      } else {
+        notifyMe('Failed to access microphone/camera. Please check permissions.');
+      }
+      return false;
+    }
+  }
+  
   const updateVideoToggle = () => {
     if (!videoToggle) return;
     videoToggle.innerText = features.video ? "Video on" : "Enable video";
@@ -397,6 +452,8 @@ var start = function() {
   if (videoToggle) {
     videoToggle.addEventListener("click", () => {
       features.video = !features.video;
+      // Save video preference to localStorage
+      localStorage.setItem("videoPreference", features.video.toString());
       updateVideoToggle();
       if (streaming) {
         videoToggle.title = "Video preference will apply on the next call.";
@@ -407,26 +464,7 @@ var start = function() {
   talkbutton.addEventListener("click", async () => {
     //console.log("call button");
     if (!streaming) {
-      try {
-        var stream = await navigator.mediaDevices.getUserMedia(features);
-        room.addStream(stream);
-        handleStream(stream, selfId);
-        streaming = stream;
-        startAudioViz(stream);
-        monitorStreamHealth(stream, 'media'); // Monitor stream health
-        muted = false;
-        talkbutton.innerHTML = !features.video
-          ? '<i class="fa fa-phone fa-2x" aria-hidden="true" style="color:white;"></i>'
-          : '<i class="fa fa-video fa-2x" aria-hidden="true" style="color:white;"></i>';
-        talkbutton.style.background = "red";
-        // notify network
-        if (sendCmd) {
-          sendCmd({ peerId: peerId, cmd: "hand", state: true });
-        }
-      } catch (error) {
-        console.error('Failed to get user media:', error);
-        notifyMe('Failed to access microphone/camera. Please check permissions.');
-      }
+      await startStreaming(false);
     } else {
       room.removeStream(streaming);
       var tracks = streaming.getTracks();
@@ -436,6 +474,8 @@ var start = function() {
       var el = byId("vid_" + selfId);
       el.srcObject = null;
       streaming = null;
+      // Clear streaming state - user manually disconnected
+      localStorage.removeItem("wasStreaming");
       // reset mute
       mutebutton.innerHTML =
         '<i class="fa fa-microphone fa-2x" aria-hidden="true"></i>';
@@ -526,11 +566,32 @@ var start = function() {
     
     // Setup stream health monitoring and keepalive
     setupStreamHealthMonitoring();
+    
+    // Auto-reconnect if user was previously streaming
+    // Delay ensures room, actions, and handlers are fully initialized
+    setTimeout(() => {
+      attemptAutoReconnect();
+    }, 500);
   }
   
   // Stream health monitoring with keepalive pings
   let healthCheckInterval = null;
   let peerHealthStatus = {};
+  
+  // Auto-reconnect function to restore previous streaming state
+  async function attemptAutoReconnect() {
+    const wasStreaming = localStorage.getItem("wasStreaming");
+    const lastRoom = localStorage.getItem("lastRoom");
+    
+    // Only auto-reconnect if:
+    // 1. User was streaming in their last session
+    // 2. They're rejoining the same room
+    // 3. They're not already streaming
+    if (wasStreaming === "true" && lastRoom === roomName && !streaming) {
+      console.log("Auto-reconnecting to previous stream...");
+      await startStreaming(true);
+    }
+  }
   
   function setupStreamHealthMonitoring() {
     if (healthCheckInterval) {
