@@ -620,6 +620,7 @@ var start = function() {
         }
         mutebutton.disabled = false;
         console.log("Auto-reconnection successful");
+        notifyMe("Automatically reconnected to your previous call");
       } catch (error) {
         console.error('Auto-reconnection failed:', error);
         // Clear the flag if auto-reconnect fails
