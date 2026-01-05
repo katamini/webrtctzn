@@ -20,6 +20,7 @@
     />
     <link rel="manifest" href="./manifest.json">
     <script src="//cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
     <script src="./utils.js"></script>
     <script type="module" src="./script.js"></script>
   </head>
@@ -124,7 +125,23 @@
 
           <section class="tile spacer" data-tile="experiment">
             <div class="tile-head">
-              <div class="tile-title">EXPERIMENT</div>
+              <div class="tile-title">YOUTUBE</div>
+            </div>
+            <div class="youtube-body">
+              <div class="youtube-input-row">
+                <input
+                  id="youtube-input"
+                  name="text"
+                  type="text"
+                  class="youtube-input"
+                  placeholder="Paste YouTube URL or video ID..."
+                  autocomplete="off"
+                />
+                <button type="button" id="youtube-load" class="ghost-btn">Load</button>
+              </div>
+              <div id="youtube-player-container" class="youtube-player-container">
+                <div id="youtube-player"></div>
+              </div>
             </div>
           </section>
           <section class="tile settings" data-tile="settings">

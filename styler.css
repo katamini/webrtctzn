@@ -795,3 +795,50 @@ body {
     width: auto;
   }
 }
+
+/* YouTube Player Styles */
+.youtube-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.youtube-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.youtube-input {
+  flex: 1;
+  height: 45px;
+  background: #0e0e0e;
+  border: 1px solid #202020;
+  color: #f0f0f0;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.youtube-input:focus {
+  outline: none;
+  border-color: #444;
+}
+
+.youtube-player-container {
+  flex: 1;
+  background: #000;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#youtube-player {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+}
