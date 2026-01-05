@@ -12,6 +12,16 @@ This feature adds a synchronized YouTube player to the webRTCTZN application, al
 
 ### Key Features
 - **Video Loading**: Users can paste YouTube URLs or video IDs
+  - Supported URL formats:
+    - Direct video ID: `AhNoy1K_czQ`
+    - Standard watch: `https://www.youtube.com/watch?v=AhNoy1K_czQ`
+    - Short URL: `https://youtu.be/AhNoy1K_czQ`
+    - Embed: `https://www.youtube.com/embed/AhNoy1K_czQ`
+    - No-cookie embed: `https://www.youtube-nocookie.com/embed/AhNoy1K_czQ`
+    - Shorts: `https://www.youtube.com/shorts/AhNoy1K_czQ`
+    - Live: `https://www.youtube.com/live/AhNoy1K_czQ`
+    - Mobile URLs: `https://m.youtube.com/watch?v=AhNoy1K_czQ`
+    - URLs with parameters: `https://www.youtube.com/watch?v=AhNoy1K_czQ&t=10s`
 - **Play/Pause Sync**: When one user plays or pauses, all peers see the same state
 - **Seek Sync**: Seeking to a different time syncs across all peers
 - **New Peer Sync**: When a new peer joins, they automatically receive the current video state

@@ -1344,9 +1344,16 @@ applyGrid();
       return input;
     }
     
-    // YouTube URL patterns
+    // YouTube URL patterns - supports various formats:
+    // - Standard watch: youtube.com/watch?v=VIDEO_ID
+    // - Short URL: youtu.be/VIDEO_ID
+    // - Embed: youtube.com/embed/VIDEO_ID or youtube-nocookie.com/embed/VIDEO_ID
+    // - Shorts: youtube.com/shorts/VIDEO_ID
+    // - Live: youtube.com/live/VIDEO_ID
     const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+      // Match youtu.be short URLs and all /path/VIDEO_ID formats (embed, shorts, live)
+      /(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:embed|shorts|live)\/)([a-zA-Z0-9_-]{11})/,
+      // Match watch URLs with v parameter (works with any subdomain like m.youtube.com)
       /youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/
     ];
     
