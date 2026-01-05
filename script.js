@@ -11,7 +11,6 @@ let isSyncingYouTube = false;
 let lastSeekTime = 0;
 let seekCheckInterval = null;
 let youtubeCallbacks = {}; // Store callbacks from start() function
-let pendingVideoLoad = null; // Queue video to load when player is ready
 
 // YouTube IFrame API ready callback - must be at module level
 window.onYouTubeIframeAPIReady = function() {
@@ -38,17 +37,6 @@ window.onYouTubeIframeAPIReady = function() {
         console.log('YouTube player ready');
         if (youtubeCallbacks.startYouTubeSeekTracking) {
           youtubeCallbacks.startYouTubeSeekTracking();
-        }
-        // Load any pending video
-        if (pendingVideoLoad && youtubeCallbacks.loadYouTubeVideo) {
-          console.log('Loading pending video:', pendingVideoLoad);
-          youtubeCallbacks.loadYouTubeVideo(
-            pendingVideoLoad.videoId,
-            pendingVideoLoad.startTime,
-            pendingVideoLoad.playerState,
-            pendingVideoLoad.isRemote
-          );
-          pendingVideoLoad = null;
         }
       },
       onStateChange: (event) => {
@@ -1402,9 +1390,8 @@ applyGrid();
         setTimeout(() => { isSyncingYouTube = false; }, 500);
       }
     } else {
-      // Player will be created by onYouTubeIframeAPIReady
-      console.log('YouTube player not ready yet, queuing video:', videoId);
-      pendingVideoLoad = { videoId, startTime, playerState, isRemote };
+      // Player not ready yet - user needs to wait for YouTube API to load
+      console.warn('YouTube player not ready yet. Please wait for the player to initialize.');
     }
     
     // Broadcast to peers if this is a local action
@@ -1499,7 +1486,6 @@ applyGrid();
     // Register callbacks for module-level YouTube API callback
     youtubeCallbacks.startYouTubeSeekTracking = startYouTubeSeekTracking;
     youtubeCallbacks.handleYouTubePlayerStateChange = handleYouTubePlayerStateChange;
-    youtubeCallbacks.loadYouTubeVideo = loadYouTubeVideo;
     
     // Helper function to handle video loading from input
     const handleVideoLoad = () => {
