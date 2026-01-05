@@ -1,9 +1,19 @@
 function drop(ev) {
   ev.preventDefault();
-  var position = {
-    x: ev.clientX / window.innerWidth,
-    y: ev.clientY / window.innerHeight
-  };
+  ev.stopPropagation();
+  const surface = document.getElementById("draw-surface");
+  const whiteboard = document.getElementById("whiteboard");
+  const wbRect = whiteboard
+    ? whiteboard.getBoundingClientRect()
+    : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+  const isOnSurface = surface && ev.target.closest("#draw-surface");
+  var position = { x: 0.5, y: 0.5 };
+  if (isOnSurface && wbRect.width && wbRect.height) {
+    position = {
+      x: (ev.clientX - wbRect.left) / wbRect.width,
+      y: (ev.clientY - wbRect.top) / wbRect.height
+    };
+  }
   var imageTypes = ["image/png", "image/gif", "image/bmp", "image/jpg"];
   if (ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0]) {
     // ev.dataTransfer.files is a FileList
@@ -26,6 +36,7 @@ function drop(ev) {
 function allowDrop(ev) {
   //ev.target.style.color = 'blue';
   ev.preventDefault();
+  ev.stopPropagation();
 }
 
 function displayImage(imgx) {
@@ -36,12 +47,13 @@ function displayImage(imgx) {
 }
 
 function displayImageOnCanvas(imgx, pos) {
-  var newx = pos.x * window.innerWidth;
-  var newy = pos.y * window.innerHeight;
-  if (newx > window.innerWidth || newy > window.innerHeight) {
+  var whiteboard = document.getElementById("whiteboard");
+  if (!whiteboard) return;
+  var newx = whiteboard ? pos.x * whiteboard.width : pos.x * window.innerWidth;
+  var newy = whiteboard ? pos.y * whiteboard.height : pos.y * window.innerHeight;
+  if (whiteboard && (newx > whiteboard.width || newy > whiteboard.height)) {
     console.log("out of bounds!", newx, newy);
   }
-  var whiteboard = document.getElementById("whiteboard");
   var ctx = whiteboard.getContext("2d");
   var img = document.createElement("img");
   img.src = imgx.result;

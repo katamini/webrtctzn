@@ -9,13 +9,17 @@ var start = function() {
   const canvas = byId("canvas");
   const whiteboard = byId("whiteboard");
   const ctx = whiteboard.getContext("2d");
-  whiteboard.width = window.innerWidth;
-  whiteboard.height = window.innerHeight;
+  const drawSurface = byId("draw-surface");
+  const mainGrid = byId("main-grid");
+  const resizeHandles = document.querySelectorAll(".resize-handle");
+  const videoToggle = byId("video-toggle");
+  const videoFeed = byId("video-feed");
+  const chatSend = byId("chat-send");
+  const audioViz = byId("audio-visualizer");
 
   const circle = byId("list");
   const chat = byId("chat");
   const chatbox = byId("chatbox");
-  const chatbutton = byId("chatbutton");
   const talkbutton = byId("talkbutton");
   const mutebutton = byId("mutebutton");
   const shareButton = byId("share-button");
@@ -37,37 +41,230 @@ var start = function() {
     closeNav();
   }, false);
 
+  function setWhiteboardSize() {
+    if (!drawSurface) return;
+    const rect = drawSurface.getBoundingClientRect();
+    whiteboard.width = rect.width;
+    whiteboard.height = rect.height;
+  }
+  setWhiteboardSize();
+
+  function resizeAudioViz() {
+    if (!audioViz) return;
+    audioViz.width = audioViz.clientWidth;
+    audioViz.height = audioViz.clientHeight || 90;
+  }
+  resizeAudioViz();
+
+  function stopAudioViz() {
+    if (vizRaf) cancelAnimationFrame(vizRaf);
+    vizRaf = null;
+    if (vizSource) {
+      try { vizSource.disconnect(); } catch (e) {}
+    }
+    vizSource = null;
+    if (audioViz) {
+      const ctx = audioViz.getContext("2d");
+      ctx.clearRect(0, 0, audioViz.width, audioViz.height);
+    }
+  }
+
+  function startAudioViz(stream) {
+    if (!audioViz || !stream) return;
+    stopAudioViz();
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    if (!audioCtx) audioCtx = new AudioCtx();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    vizData = new Uint8Array(analyser.frequencyBinCount);
+    vizSource = audioCtx.createMediaStreamSource(stream);
+    vizSource.connect(analyser);
+
+    const ctx = audioViz.getContext("2d");
+    const bars = 32;
+    const draw = () => {
+      vizRaf = requestAnimationFrame(draw);
+      analyser.getByteFrequencyData(vizData);
+      const width = audioViz.width || 1;
+      const height = audioViz.height || 1;
+      ctx.clearRect(0, 0, width, height);
+      const slice = Math.max(1, Math.floor(vizData.length / bars));
+      const barWidth = width / bars;
+      for (let i = 0; i < bars; i++) {
+        const v = vizData[i * slice] / 255;
+        const barHeight = v * height;
+        ctx.fillStyle = "#7ee787";
+        ctx.fillRect(i * barWidth, height - barHeight, barWidth * 0.75, barHeight);
+      }
+    };
+    draw();
+  }
+
+  const defaultColPerc = [25, 25, 25, 25];
+  const defaultRowPerc = [50, 50];
+  let colPerc = [...defaultColPerc];
+  let rowPerc = [...defaultRowPerc];
+  const minCol = 10;
+  const minRow = 20;
+  let expandedTile = null;
+  let savedPerc = null;
+  let audioCtx = null;
+  let analyser = null;
+  let vizSource = null;
+  let vizData = null;
+  let vizRaf = null;
+
+  function applyGrid() {
+    if (!mainGrid) return;
+    mainGrid.style.setProperty("--col-1", colPerc[0] + "%");
+    mainGrid.style.setProperty("--col-2", colPerc[1] + "%");
+    mainGrid.style.setProperty("--col-3", colPerc[2] + "%");
+    mainGrid.style.setProperty("--col-4", colPerc[3] + "%");
+    mainGrid.style.setProperty("--row-1", rowPerc[0] + "%");
+    mainGrid.style.setProperty("--row-2", rowPerc[1] + "%");
+
+    if (resizeHandles && resizeHandles.length) {
+      let acc = 0;
+      const totalCols = colPerc.reduce((a, b) => a + b, 0);
+      const totalRows = rowPerc.reduce((a, b) => a + b, 0);
+      resizeHandles.forEach(handle => {
+        const idx = Number(handle.dataset.index);
+        if (handle.classList.contains("col")) {
+          acc = colPerc.slice(0, idx + 1).reduce((a, b) => a + b, 0);
+          handle.style.left = (acc / totalCols) * 100 + "%";
+        } else if (handle.classList.contains("row")) {
+          const rowAcc = rowPerc.slice(0, idx + 1).reduce((a, b) => a + b, 0);
+          handle.style.top = (rowAcc / totalRows) * 100 + "%";
+        }
+      });
+    }
+  }
+  applyGrid();
+
+  function bindResize(handle) {
+    const idx = Number(handle.dataset.index);
+    const isCol = handle.classList.contains("col");
+    handle.addEventListener("pointerdown", e => {
+      e.preventDefault();
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startCols = [...colPerc];
+      const startRows = [...rowPerc];
+      const gridWidth = mainGrid ? mainGrid.clientWidth : window.innerWidth;
+      const gridHeight = mainGrid ? mainGrid.clientHeight : window.innerHeight;
+      function onMove(evt) {
+        if (isCol) {
+          const deltaPx = evt.clientX - startX;
+          const deltaPercent = (deltaPx / gridWidth) * 100;
+          let a = startCols[idx] + deltaPercent;
+          let b = startCols[idx + 1] - deltaPercent;
+          if (a < minCol) { b -= minCol - a; a = minCol; }
+          if (b < minCol) { a -= minCol - b; b = minCol; }
+          colPerc[idx] = a;
+          colPerc[idx + 1] = b;
+        } else {
+          const deltaPx = evt.clientY - startY;
+          const deltaPercent = (deltaPx / gridHeight) * 100;
+          let a = startRows[idx] + deltaPercent;
+          let b = startRows[idx + 1] - deltaPercent;
+          if (a < minRow) { b -= minRow - a; a = minRow; }
+          if (b < minRow) { a -= minRow - b; b = minRow; }
+          rowPerc[idx] = a;
+          rowPerc[idx + 1] = b;
+        }
+        const colTotal = colPerc.reduce((p, c) => p + c, 0);
+        const rowTotal = rowPerc.reduce((p, c) => p + c, 0);
+        const colScale = 100 / colTotal;
+        const rowScale = 100 / rowTotal;
+        colPerc = colPerc.map(v => v * colScale);
+        rowPerc = rowPerc.map(v => v * rowScale);
+        applyGrid();
+        setWhiteboardSize();
+        resizeAudioViz();
+      }
+      function onUp() {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+      }
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+    });
+  }
+
+  resizeHandles.forEach(bindResize);
+  window.addEventListener("resize", () => {
+    applyGrid();
+    setWhiteboardSize();
+    resizeAudioViz();
+  });
+
+  function expandTile(tile) {
+    if (!tile) return;
+    const tiles = Array.from(document.querySelectorAll(".tile"));
+    const index = tiles.indexOf(tile);
+    if (index === -1) return;
+    const colIndex = index % 4;
+    const rowIndex = Math.floor(index / 4);
+
+    // toggle off
+    if (expandedTile === tile && savedPerc) {
+      colPerc = [...savedPerc.col];
+      rowPerc = [...savedPerc.row];
+      expandedTile = null;
+      savedPerc = null;
+      applyGrid();
+      setWhiteboardSize();
+      return;
+    }
+
+    savedPerc = { col: [...colPerc], row: [...rowPerc] };
+    expandedTile = tile;
+
+    let newCols;
+    if (colIndex === 3) {
+      newCols = [18, 18, 18, 46];
+    } else {
+      newCols = [15, 15, 15, 15];
+      newCols[colIndex] = 55;
+      newCols[3] = 15;
+    }
+
+    let newRows = [...rowPerc];
+    if (rowIndex === 0) {
+      newRows = [70, 30];
+    } else if (rowIndex === 1) {
+      newRows = [30, 70];
+    }
+
+    colPerc = newCols;
+    rowPerc = newRows;
+    applyGrid();
+    setWhiteboardSize();
+    resizeAudioViz();
+  }
+
+  document.querySelectorAll(".tile-head").forEach(head => {
+    head.addEventListener("dblclick", e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const tile = head.closest(".tile");
+      expandTile(tile);
+    });
+  });
+
   //const peerInfo = byId("peer-info");
   //const noPeersCopy = peerInfo.innerText;
   const config = { appId: "ctzn-glitch" };
   const cursors = {};
   const roomCap = 33;
-  const fruits = [
-    "🍏",
-    "🍎",
-    "🍐",
-    "🍊",
-    "🍋",
-    "🍌",
-    "🍉",
-    "🍇",
-    "🍓",
-    "🍈",
-    "🍒",
-    "🍑",
-    "🥭",
-    "🍍",
-    "🥥",
-    "🥝"
-  ];
-  const randomFruit = () => fruits[Math.floor(Math.random() * fruits.length)];
 
   let mouseX = 0;
   let mouseY = 0;
   let room;
   let rooms;
   let sendMove;
-  let sendClick;
   let sendChat;
   let sendPeer;
   let sendCmd;
@@ -141,72 +338,68 @@ var start = function() {
 
   var isDrawing = false;
   var plots = [];
-  var rect = canvas.getBoundingClientRect();
-  var offsetX = rect.left;
-  var offsetY = rect.top;
-  window.addEventListener("mouseup", e => {
-    //console.log('mouse stop');
+  function getDrawPoint(evt) {
+    if (!drawSurface) return false;
+    const rect = drawSurface.getBoundingClientRect();
+    const point = evt.touches ? evt.touches[0] : evt;
+    return {
+      x: (point.clientX - rect.left) / rect.width,
+      y: (point.clientY - rect.top) / rect.height
+    };
+  }
+
+  function endDraw() {
+    if (!isDrawing) return;
     isDrawing = false;
-    if (sendCmd) {
-      sendCmd({ peerId: selfId, cmd: "draw", plots: plots, color: "#b2b2b2" });
+    if (sendCmd && plots.length) {
+      sendCmd({ peerId: selfId, cmd: "draw", plots: plots, color: userStroke });
     }
     plots = [];
-  });
-  window.addEventListener("mousedown", e => {
-    //console.log('mouse start');
-    isDrawing = true;
-  });
+  }
 
-  window.addEventListener("mousemove", ({ clientX, clientY, buttons }) => {
+  function moveDraw(evt) {
+    if (evt.touches && evt.cancelable) evt.preventDefault();
+    if (!isDrawing) return;
+    const point = getDrawPoint(evt);
+    if (!point) return;
+    if (plots.length > 50) {
+      if (sendCmd) {
+        sendCmd({ peerId: selfId, cmd: "draw", plots: plots, color: userStroke });
+      }
+      plots = [];
+    }
+    plots.push(point);
+    drawOnCanvas(userStroke, plots, true);
+  }
+
+  function startDraw(evt) {
+    if (evt.touches && evt.cancelable) evt.preventDefault();
+    isDrawing = true;
+    plots = [];
+    const point = getDrawPoint(evt);
+    if (point) plots.push(point);
+  }
+
+  if (drawSurface) {
+    drawSurface.addEventListener("mousedown", startDraw);
+    drawSurface.addEventListener("mousemove", moveDraw);
+    drawSurface.addEventListener("mouseleave", endDraw);
+    drawSurface.addEventListener("touchstart", startDraw, { passive: false });
+    drawSurface.addEventListener("touchmove", moveDraw, { passive: false });
+    drawSurface.addEventListener("touchend", endDraw);
+  }
+
+  window.addEventListener("mouseup", endDraw);
+
+  window.addEventListener("mousemove", ({ clientX, clientY }) => {
     mouseX = clientX / window.innerWidth;
     mouseY = clientY / window.innerHeight;
     moveCursor([mouseX, mouseY], selfId);
     if (room) {
       sendMove([mouseX, mouseY]);
     }
-
-    if (isDrawing) {
-      if (plots.length>50){
-        if (sendCmd) {
-          sendCmd({ peerId: selfId, cmd: "draw", plots: plots, color: "#b2b2b2" });
-        }
-        plots = [];
-      }
-      plots.push({ x: mouseX, y: mouseY });
-      drawOnCanvas(userStroke, plots, true);
-    }
-  });
-
-  window.addEventListener("click", () => {
-    const payload = [randomFruit(), mouseX, mouseY];
-    dropFruit(payload);
-    if (room) {
-      sendClick(payload);
-    }
-  });
-
-  window.addEventListener("touchstart", e => {
-    const x = e.touches[0].clientX / window.innerWidth;
-    const y = e.touches[0].clientY / window.innerHeight;
-    const payload = [randomFruit(), x, y];
-
-    dropFruit(payload);
-    moveCursor([x, y], selfId);
-
-    if (room) {
-      sendMove([x, y]);
-      sendClick(payload);
-    }
   });
   
-
-  window.addEventListener("click", () => {
-    const payload = [randomFruit(), mouseX, mouseY];
-    dropFruit(payload);
-    if (room) {
-      sendClick(payload);
-    }
-  });
 
   window.chat = function(msg) {
     if (!msg || msg.length < 1) return;
@@ -221,9 +414,32 @@ var start = function() {
       return false;
     }
   });
+  if (chatSend) {
+    chatSend.addEventListener("click", () => {
+      window.chat(chatbox.value);
+      chatbox.value = "";
+    });
+  }
 
   var streaming = false;
   var muted = false;
+  const updateVideoToggle = () => {
+    if (!videoToggle) return;
+    videoToggle.innerText = features.video ? "Video on" : "Enable video";
+    videoToggle.title = features.video ? "Video enabled for the next call" : "Audio-only by default";
+  };
+  updateVideoToggle();
+
+  if (videoToggle) {
+    videoToggle.addEventListener("click", () => {
+      features.video = !features.video;
+      updateVideoToggle();
+      if (streaming) {
+        videoToggle.title = "Video preference will apply on the next call.";
+      }
+    });
+  }
+
   talkbutton.addEventListener("click", async () => {
     //console.log("call button");
     if (!streaming) {
@@ -231,6 +447,7 @@ var start = function() {
       room.addStream(stream);
       handleStream(stream, selfId);
       streaming = stream;
+      startAudioViz(stream);
       muted = false;
       talkbutton.innerHTML = !features.video
         ? '<i class="fa fa-phone fa-2x" aria-hidden="true" style="color:white;"></i>'
@@ -258,6 +475,7 @@ var start = function() {
         ? '<i class="fa fa-phone fa-2x" aria-hidden="true" style="color:green;"></i>'
         : '<i class="fa fa-video fa-2x" aria-hidden="true"></i>';
       talkbutton.style.background = "";
+      stopAudioViz();
       // notify network
       if (sendCmd) {
         sendCmd({ peerId: peerId, cmd: "stop_video" });
@@ -288,12 +506,11 @@ var start = function() {
     const ns = "room" + n;
     const members = 1;
 
-    let getMove;
-    let getClick;
-    let getChat;
-    let getPeer;
-    let getCmd;
-    let getPic;
+  let getMove;
+  let getChat;
+  let getPeer;
+  let getCmd;
+  let getPic;
 
     if (members === roomCap) {
       return init(n + 1);
@@ -304,7 +521,6 @@ var start = function() {
     window.roomId = n;
     window.self = selfId;
     [sendMove, getMove] = room.makeAction("mouseMove");
-    [sendClick, getClick] = room.makeAction("click");
     [sendChat, getChat] = room.makeAction("chat");
     [sendCmd, getCmd] = room.makeAction("cmd");
     [sendPic, getPic] = room.makeAction("pic");
@@ -314,7 +530,6 @@ var start = function() {
     room.onPeerLeave(removeCursor);
     room.onPeerStream(handleStream);
     getMove(moveCursor);
-    getClick(dropFruit);
     getChat(updateChat);
     getCmd(handleCmd);
     getPic(handlePic);
@@ -462,9 +677,8 @@ var start = function() {
     txt.id = "name_" + id;
     const video = document.createElement("video");
     video.id = "vid_" + id;
-    video.className = "video-circle";
-
-    //video.addEventListener('loadedmetadata', function(data) { console.log('metaload',data) });
+    video.playsInline = true;
+    video.muted = isSelf ? true : false;
 
     el.style.float = "left";
     el.className = `cursor${isSelf ? " self" : ""}`;
@@ -473,9 +687,15 @@ var start = function() {
     txt.innerText = isSelf ? "you" : id.slice(0, 4);
     el.appendChild(img);
     el.appendChild(txt);
-    el.appendChild(video);
+    if (isSelf) {
+      img.style.display = "none";
+    }
     canvas.appendChild(el);
     cursors[id] = el;
+
+    if (videoFeed) {
+      videoFeed.appendChild(video);
+    }
 
     if (!isSelf) {
       updatePeerInfo();
@@ -517,14 +737,20 @@ var start = function() {
     if (cursors[id]) {
       canvas.removeChild(cursors[id]);
     }
+    const vid = byId("vid_" + id);
+    if (vid && vid.parentNode) {
+      vid.parentNode.removeChild(vid);
+    }
     if (streams[id]) {
       room.removeStream(streams[id], id);
       streams[id] = false;
     }
 
     var li = byId("circle_" + id);
-    circle.removeChild(li);
-    updateLayout();
+    if (li && li.parentNode) {
+      circle.removeChild(li);
+      updateLayout();
+    }
 
     updatePeerInfo();
   }
@@ -565,16 +791,6 @@ var start = function() {
     } else {
       chat.innerHTML = user + ": " + msg + "<br/>" + chat.innerHTML;
     }
-  }
-
-  function dropFruit([fruit, x, y]) {
-    const el = document.createElement("div");
-    el.className = "fruit";
-    el.innerText = fruit;
-    el.style.left = x * window.innerWidth + "px";
-    el.style.top = y * window.innerHeight + "px";
-    canvas.appendChild(el);
-    setTimeout(() => canvas.removeChild(el), 3000);
   }
 
   function isValidHttpUrl(string) {
@@ -620,10 +836,10 @@ var start = function() {
     notifyMe("link shared to clipboard");
     if (shareButton) {
       shareButton.innerHTML =
-        '<i class="fa fa-share-alt-square fa-1x" aria-hidden="true"></i>';
+        '<i class="fa fa-share-alt-square fa-1x" aria-hidden="true"></i><span>Copied</span>';
       setTimeout(function() {
         shareButton.innerHTML =
-          '<i class="fa fa-share-alt fa-1x" aria-hidden="true"></i>';
+          '<i class="fa fa-share-alt fa-1x" aria-hidden="true"></i><span>Copy link</span>';
       }, 1000);
     }
     
@@ -661,12 +877,12 @@ var start = function() {
     ctx.strokeStyle = color;
     ctx.beginPath();
     ctx.lineWidth = 1;
-    ctx.moveTo(plots[0].x * window.innerWidth, plots[0].y * window.innerHeight);
+    ctx.moveTo(plots[0].x * whiteboard.width, plots[0].y * whiteboard.height);
     for (var i = 1; i < plots.length; i++) {
       fadeOutCanvas();
       ctx.lineTo(
-        plots[i].x * window.innerWidth,
-        plots[i].y * window.innerHeight
+        plots[i].x * whiteboard.width,
+        plots[i].y * whiteboard.height
       );
     }
     ctx.stroke();

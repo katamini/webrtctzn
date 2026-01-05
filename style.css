@@ -499,8 +499,7 @@ textarea::placeholder {
 
 button,
 [role="button"] {
-  cursor: none;
-  
+  cursor: pointer;
 }
 
 
@@ -108670,4 +108669,3 @@ label {
     line-height: 1;
     margin: 15px 0 0 15px;
 }
-
