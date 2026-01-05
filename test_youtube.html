@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>YouTube Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff; }
+    #youtube-player { width: 640px; height: 360px; background: #000; }
+    input { width: 400px; padding: 10px; margin: 10px 0; }
+    button { padding: 10px 20px; cursor: pointer; }
+    #log { margin-top: 20px; background: #000; padding: 10px; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h2>YouTube Player Test</h2>
+  <input id="youtube-input" type="text" placeholder="Paste YouTube URL or video ID..." />
+  <button id="youtube-load">Load</button>
+  <div id="youtube-player"></div>
+  <div id="log"></div>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script>
+    const log = document.getElementById('log');
+    function addLog(msg) {
+      console.log(msg);
+      log.textContent += msg + '\n';
+    }
+
+    // YouTube player state
+    let youtubePlayer = null;
+    let currentVideoId = null;
+
+    // YouTube IFrame API ready callback
+    window.onYouTubeIframeAPIReady = function() {
+      addLog('YouTube IFrame API ready');
+      
+      if (typeof YT === 'undefined' || !YT.Player) {
+        addLog('ERROR: YouTube API not loaded properly');
+        return;
+      }
+      
+      youtubePlayer = new YT.Player('youtube-player', {
+        height: '360',
+        width: '640',
+        videoId: '',
+        playerVars: {
+          autoplay: 0,
+          controls: 1,
+          modestbranding: 1,
+          rel: 0,
+          fs: 1
+        },
+        events: {
+          onReady: (event) => {
+            addLog('YouTube player ready');
+          },
+          onStateChange: (event) => {
+            addLog('Player state changed: ' + event.data);
+          }
+        }
+      });
+    };
+
+    function extractVideoId(input) {
+      if (!input) return null;
+      // Already a video ID (11 characters)
+      if (/^[a-zA-Z0-9_-]{11}$/.test(input)) {
+        return input;
+      }
+      
+      // YouTube URL patterns
+      const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+        /youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/
+      ];
+      
+      for (const pattern of patterns) {
+        const match = input.match(pattern);
+        if (match) return match[1];
+      }
+      
+      return null;
+    }
+
+    function loadYouTubeVideo(videoId) {
+      if (!videoId) return;
+      
+      addLog('Loading video: ' + videoId);
+      currentVideoId = videoId;
+      
+      if (youtubePlayer) {
+        youtubePlayer.loadVideoById({
+          videoId: videoId,
+          startSeconds: 0
+        });
+      } else {
+        addLog('ERROR: Player not ready yet');
+      }
+    }
+
+    // Set up event listeners
+    const youtubeInput = document.getElementById('youtube-input');
+    const youtubeLoadBtn = document.getElementById('youtube-load');
+    
+    const handleVideoLoad = () => {
+      const input = youtubeInput.value.trim();
+      addLog('Input: ' + input);
+      if (input) {
+        const videoId = extractVideoId(input);
+        addLog('Extracted video ID: ' + videoId);
+        if (videoId) {
+          loadYouTubeVideo(videoId);
+          youtubeInput.value = '';
+        } else {
+          addLog('ERROR: Invalid YouTube URL or video ID');
+        }
+      }
+    };
+    
+    youtubeInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        addLog('Enter key pressed');
+        handleVideoLoad();
+      }
+    });
+    
+    youtubeLoadBtn.addEventListener('click', () => {
+      addLog('Load button clicked');
+      handleVideoLoad();
+    });
+
+    addLog('Event listeners set up');
+    addLog('Waiting for YouTube API to load...');
+    
+    // Check if API already loaded
+    if (typeof YT !== 'undefined' && YT.Player) {
+      addLog('YouTube API already loaded, initializing player...');
+      window.onYouTubeIframeAPIReady();
+    }
+  </script>
+</body>
+</html>
