@@ -540,25 +540,25 @@ var start = function() {
     [sendPic, getPic] = room.makeAction("pic");
 
     byId("room-num").innerText = "#" + n;
-    room.onPeerJoin(peerId => {
-      addCursor(peerId);
+    room.onPeerJoin(joiningPeerId => {
+      addCursor(joiningPeerId);
       // Send existing stream to new peer (Trystero best practice)
       if (streaming) {
-        room.addStream(streaming, peerId);
+        room.addStream(streaming, joiningPeerId);
         // Also send the hand command to indicate streaming state
         if (sendCmd) {
-          sendCmd({ peerId: selfId + "_call", cmd: "hand", state: true }, peerId);
+          sendCmd({ peerId: peerId, cmd: "hand", state: true }, joiningPeerId);
         }
       }
       // Send screenshare to new peer if active
       if (screenSharing) {
-        room.addStream(screenSharing, peerId);
+        room.addStream(screenSharing, joiningPeerId);
         if (sendCmd) {
           sendCmd({
             peerId: selfId + "_screen",
             cmd: "screenshare",
             stream: screenSharing.id
-          }, peerId);
+          }, joiningPeerId);
         }
       }
     });
