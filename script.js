@@ -111,8 +111,8 @@ var start = function() {
     draw();
   }
 
-  const defaultColPerc = [20, 55, 25];
-  const defaultCenterRows = [65, 35];
+  const defaultColPerc = [25, 60, 15];
+  const defaultCenterRows = [60, 40];
   let colPerc = [...defaultColPerc];
   let centerRowPerc = [...defaultCenterRows];
   const minCol = 10;
