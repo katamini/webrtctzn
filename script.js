@@ -163,8 +163,9 @@ var start = function() {
       const height = audioViz.height || 1;
       ctx.clearRect(0, 0, width, height);
       const grad = ctx.createLinearGradient(0, 0, 0, height);
-      grad.addColorStop(0, "#d9d9d9");
-      grad.addColorStop(1, "#3a3a3a");
+      grad.addColorStop(0, "#777");
+      grad.addColorStop(0.5, "#444");
+      grad.addColorStop(1, "#111");
       const slice = Math.max(1, Math.floor(vizData.length / bars));
       const barWidth = width / bars;
       for (let i = 0; i < bars; i++) {
