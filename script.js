@@ -99,9 +99,9 @@ var start = function() {
       const height = audioViz.height || 1;
       ctx.clearRect(0, 0, width, height);
       const grad = ctx.createLinearGradient(0, 0, 0, height);
-      grad.addColorStop(0, "#9ef0c0");
-      grad.addColorStop(0.5, "#5eead4");
-      grad.addColorStop(1, "#38bdf8");
+      grad.addColorStop(0, "#f0f0f0");
+      grad.addColorStop(0.5, "#a6a6a6");
+      grad.addColorStop(1, "#4d4d4d");
       const slice = Math.max(1, Math.floor(vizData.length / bars));
       const barWidth = width / bars;
       for (let i = 0; i < bars; i++) {
@@ -264,10 +264,6 @@ applyGrid();
       expandTile(tile);
     });
   });
-
-  function expandTile(tile) {
-    return;
-  }
 
   //const peerInfo = byId("peer-info");
   //const noPeersCopy = peerInfo.innerText;
