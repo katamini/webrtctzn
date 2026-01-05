@@ -280,6 +280,14 @@ applyGrid();
   let sendPeer;
   let sendCmd;
   let sendPic;
+  let sendYouTubeAction;
+
+  // YouTube player state
+  let youtubePlayer = null;
+  let currentVideoId = null;
+  let isSyncingYouTube = false;
+  let lastSeekTime = 0;
+  let seekCheckInterval = null;
 
   const peerAlias = {};
 
@@ -588,6 +596,7 @@ applyGrid();
   let getPeer;
   let getCmd;
   let getPic;
+  let getYouTubeAction;
 
     if (members === roomCap) {
       return init(n + 1);
@@ -601,6 +610,7 @@ applyGrid();
     [sendChat, getChat] = room.makeAction("chat");
     [sendCmd, getCmd] = room.makeAction("cmd");
     [sendPic, getPic] = room.makeAction("pic");
+    [sendYouTubeAction, getYouTubeAction] = room.makeAction("youtube");
 
     byId("room-num").innerText = "#" + n;
     room.onPeerJoin(joiningPeerId => {
@@ -635,6 +645,23 @@ applyGrid();
           }, joiningPeerId);
         }
       }
+      
+      // Send YouTube video state to new peer
+      if (currentVideoId && youtubePlayer && sendYouTubeAction) {
+        try {
+          const currentTime = youtubePlayer.getCurrentTime();
+          const playerState = youtubePlayer.getPlayerState();
+          
+          sendYouTubeAction({
+            action: 'videoLoad',
+            videoId: currentVideoId,
+            time: currentTime,
+            state: playerState
+          }, joiningPeerId);
+        } catch (e) {
+          console.log('Could not send YouTube state to new peer:', e);
+        }
+      }
     });
     room.onPeerLeave(removeCursor);
     room.onPeerStream(handleStream);
@@ -642,12 +669,16 @@ applyGrid();
     getChat(updateChat);
     getCmd(handleCmd);
     getPic(handlePic);
+    getYouTubeAction(handleYouTubeAction);
 
     // mappings
     window.ctl = { sendCmd: sendCmd, sendPic: sendPic, peerId: selfId };
     
     // Setup stream health monitoring and keepalive
     setupStreamHealthMonitoring();
+    
+    // Initialize YouTube player
+    initYouTubePlayer();
     
     // Auto-reconnect if user was previously streaming
     // Delay ensures room, actions, and handlers are fully initialized
@@ -1267,6 +1298,225 @@ applyGrid();
     });
   }
   window.reJoinRoom = reJoinRoom;
+
+  // YouTube Player Functions
+  function extractVideoId(input) {
+    if (!input) return null;
+    // Already a video ID (11 characters)
+    if (/^[a-zA-Z0-9_-]{11}$/.test(input)) {
+      return input;
+    }
+    
+    // YouTube URL patterns
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = input.match(pattern);
+      if (match) return match[1];
+    }
+    
+    return null;
+  }
+
+  function loadYouTubeVideo(videoId, startTime = 0, playerState = null, isRemote = false) {
+    if (!videoId) return;
+    
+    console.log('Loading YouTube video:', videoId, 'at', startTime, 'state:', playerState);
+    currentVideoId = videoId;
+    
+    if (youtubePlayer) {
+      // Player exists, just load new video
+      isSyncingYouTube = true;
+      youtubePlayer.loadVideoById({
+        videoId: videoId,
+        startSeconds: startTime
+      });
+      
+      // Apply player state if provided
+      if (playerState !== null) {
+        setTimeout(() => {
+          if (playerState === 1) { // Playing
+            youtubePlayer.playVideo();
+          } else if (playerState === 2) { // Paused
+            youtubePlayer.pauseVideo();
+          }
+          isSyncingYouTube = false;
+        }, 500);
+      } else {
+        setTimeout(() => { isSyncingYouTube = false; }, 500);
+      }
+    } else {
+      // Player will be created by onYouTubeIframeAPIReady
+      console.log('YouTube player not ready yet');
+    }
+    
+    // Broadcast to peers if this is a local action
+    if (!isRemote && sendYouTubeAction) {
+      sendYouTubeAction({
+        action: 'videoLoad',
+        videoId: videoId,
+        time: startTime,
+        state: playerState || 2 // Default to paused
+      });
+    }
+  }
+
+  function handleYouTubePlayerStateChange(event) {
+    if (isSyncingYouTube) return;
+    
+    const playerState = event.data;
+    
+    // YT.PlayerState.PLAYING = 1
+    if (playerState === 1) {
+      if (sendYouTubeAction) {
+        sendYouTubeAction({ action: 'play' });
+      }
+    }
+    // YT.PlayerState.PAUSED = 2
+    else if (playerState === 2) {
+      if (sendYouTubeAction) {
+        sendYouTubeAction({ action: 'pause' });
+      }
+    }
+  }
+
+  function startYouTubeSeekTracking() {
+    if (seekCheckInterval) return;
+    
+    seekCheckInterval = setInterval(() => {
+      if (!youtubePlayer || isSyncingYouTube) return;
+      
+      try {
+        const currentTime = youtubePlayer.getCurrentTime();
+        
+        // Check if there was a significant jump (> 2 seconds)
+        if (Math.abs(currentTime - lastSeekTime) > 2) {
+          if (sendYouTubeAction) {
+            sendYouTubeAction({ action: 'seek', time: currentTime });
+          }
+        }
+        
+        lastSeekTime = currentTime;
+      } catch (e) {
+        // Player might not be ready yet
+      }
+    }, 500);
+  }
+
+  function handleYouTubeAction(data, peerId) {
+    if (!data || peerId === selfId) return;
+    
+    console.log('Received YouTube action:', data.action, 'from', peerId);
+    
+    if (data.action === 'videoLoad' && data.videoId) {
+      if (data.videoId !== currentVideoId) {
+        loadYouTubeVideo(data.videoId, data.time || 0, data.state, true);
+      }
+    } else if (data.action === 'play') {
+      if (youtubePlayer && !isSyncingYouTube) {
+        isSyncingYouTube = true;
+        youtubePlayer.playVideo();
+        setTimeout(() => { isSyncingYouTube = false; }, 100);
+      }
+    } else if (data.action === 'pause') {
+      if (youtubePlayer && !isSyncingYouTube) {
+        isSyncingYouTube = true;
+        youtubePlayer.pauseVideo();
+        setTimeout(() => { isSyncingYouTube = false; }, 100);
+      }
+    } else if (data.action === 'seek' && data.time !== undefined) {
+      if (youtubePlayer && !isSyncingYouTube) {
+        isSyncingYouTube = true;
+        youtubePlayer.seekTo(data.time, true);
+        setTimeout(() => { isSyncingYouTube = false; }, 100);
+      }
+    }
+  }
+
+  function initYouTubePlayer() {
+    const youtubeInput = byId("youtube-input");
+    const youtubeLoadBtn = byId("youtube-load");
+    
+    if (!youtubeInput || !youtubeLoadBtn) return;
+    
+    // Handle video input
+    youtubeInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        const input = youtubeInput.value.trim();
+        if (input) {
+          const videoId = extractVideoId(input);
+          if (videoId) {
+            loadYouTubeVideo(videoId);
+            youtubeInput.value = '';
+          } else {
+            notifyMe('Invalid YouTube URL or video ID');
+          }
+        }
+      }
+    });
+    
+    youtubeLoadBtn.addEventListener('click', () => {
+      const input = youtubeInput.value.trim();
+      if (input) {
+        const videoId = extractVideoId(input);
+        if (videoId) {
+          loadYouTubeVideo(videoId);
+          youtubeInput.value = '';
+        } else {
+          notifyMe('Invalid YouTube URL or video ID');
+        }
+      }
+    });
+    
+    // When peers join, send them current video state
+    if (room) {
+      const originalOnPeerJoin = room.onPeerJoin;
+      // Note: We already handle this in the existing onPeerJoin callback above
+      // So we'll just add logic to send YouTube state there if needed
+    }
+  }
+
+  // Make YouTube player available globally for the API callback
+  window.onYouTubeIframeAPIReady = function() {
+    console.log('YouTube IFrame API ready');
+    
+    if (typeof YT === 'undefined' || !YT.Player) {
+      console.error('YouTube API not loaded properly');
+      return;
+    }
+    
+    youtubePlayer = new YT.Player('youtube-player', {
+      height: '100%',
+      width: '100%',
+      videoId: '', // Start with no video
+      playerVars: {
+        autoplay: 0,
+        controls: 1,
+        modestbranding: 1,
+        rel: 0,
+        fs: 1
+      },
+      events: {
+        onReady: (event) => {
+          console.log('YouTube player ready');
+          startYouTubeSeekTracking();
+        },
+        onStateChange: handleYouTubePlayerStateChange
+      }
+    });
+  };
+
+  // Check if YouTube API is already loaded (in case of page reload)
+  if (typeof YT !== 'undefined' && YT.Player && !youtubePlayer) {
+    setTimeout(() => {
+      if (window.onYouTubeIframeAPIReady) {
+        window.onYouTubeIframeAPIReady();
+      }
+    }, 100);
+  }
 
 };
 
