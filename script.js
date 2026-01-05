@@ -286,9 +286,11 @@ var start = function() {
     roomName = urlParams.get("room");
     init(roomName);
   } else {
+    // No room specified - prompt user for room name
+    // getRoomName() will redirect page with room parameter, so we exit early
+    // to prevent errors from using undefined roomName in URL formatting below
     getRoomName();
-    //roomName = "lobby";
-    //init(roomName);
+    return; // Exit early - getRoomName will redirect the page
   }
   if (urlParams.has("video") || features.video) {
     features.video = true;
@@ -443,19 +445,25 @@ var start = function() {
   talkbutton.addEventListener("click", async () => {
     //console.log("call button");
     if (!streaming) {
-      var stream = await navigator.mediaDevices.getUserMedia(features);
-      room.addStream(stream);
-      handleStream(stream, selfId);
-      streaming = stream;
-      startAudioViz(stream);
-      muted = false;
-      talkbutton.innerHTML = !features.video
-        ? '<i class="fa fa-phone fa-2x" aria-hidden="true" style="color:white;"></i>'
-        : '<i class="fa fa-video fa-2x" aria-hidden="true" style="color:white;"></i>';
-      talkbutton.style.background = "red";
-      // notify network
-      if (sendCmd) {
-        sendCmd({ peerId: peerId, cmd: "hand", state: true });
+      try {
+        var stream = await navigator.mediaDevices.getUserMedia(features);
+        room.addStream(stream);
+        handleStream(stream, selfId);
+        streaming = stream;
+        startAudioViz(stream);
+        monitorStreamHealth(stream, 'media'); // Monitor stream health
+        muted = false;
+        talkbutton.innerHTML = !features.video
+          ? '<i class="fa fa-phone fa-2x" aria-hidden="true" style="color:white;"></i>'
+          : '<i class="fa fa-video fa-2x" aria-hidden="true" style="color:white;"></i>';
+        talkbutton.style.background = "red";
+        // notify network
+        if (sendCmd) {
+          sendCmd({ peerId: peerId, cmd: "hand", state: true });
+        }
+      } catch (error) {
+        console.error('Failed to get user media:', error);
+        notifyMe('Failed to access microphone/camera. Please check permissions.');
       }
     } else {
       room.removeStream(streaming);
@@ -526,7 +534,24 @@ var start = function() {
     [sendPic, getPic] = room.makeAction("pic");
 
     byId("room-num").innerText = "#" + n;
-    room.onPeerJoin(addCursor);
+    room.onPeerJoin(peerId => {
+      addCursor(peerId);
+      // Send existing stream to new peer (Trystero best practice)
+      if (streaming) {
+        room.addStream(streaming, peerId);
+      }
+      // Send screenshare to new peer if active
+      if (screenSharing) {
+        room.addStream(screenSharing, peerId);
+        if (sendCmd) {
+          sendCmd({
+            peerId: selfId + "_screen",
+            cmd: "screenshare",
+            stream: screenSharing.id
+          }, peerId);
+        }
+      }
+    });
     room.onPeerLeave(removeCursor);
     room.onPeerStream(handleStream);
     getMove(moveCursor);
@@ -536,6 +561,125 @@ var start = function() {
 
     // mappings
     window.ctl = { sendCmd: sendCmd, sendPic: sendPic, peerId: selfId };
+    
+    // Setup stream health monitoring and keepalive
+    setupStreamHealthMonitoring();
+  }
+  
+  // Stream health monitoring with keepalive pings
+  let healthCheckInterval = null;
+  let peerHealthStatus = {};
+  
+  function setupStreamHealthMonitoring() {
+    if (healthCheckInterval) {
+      clearInterval(healthCheckInterval);
+    }
+    
+    // Only setup monitoring if room has ping capability
+    if (!room || typeof room.ping !== 'function') {
+      console.log('Room ping not available, skipping health monitoring');
+      return;
+    }
+    
+    // Monitor connection health every 30 seconds
+    healthCheckInterval = setInterval(async () => {
+      if (!room) return;
+      
+      const peers = room.getPeers();
+      for (const peerId of peers) {
+        try {
+          const latency = await room.ping(peerId);
+          
+          // Track peer health
+          if (!peerHealthStatus[peerId]) {
+            peerHealthStatus[peerId] = { failures: 0, lastSuccess: Date.now() };
+          }
+          
+          if (latency > 0) {
+            // Successful ping
+            peerHealthStatus[peerId].failures = 0;
+            peerHealthStatus[peerId].lastSuccess = Date.now();
+          } else {
+            // Failed ping
+            peerHealthStatus[peerId].failures++;
+          }
+          
+          // If connection is degraded, try to reinitialize stream
+          if (peerHealthStatus[peerId].failures >= 3 && streaming) {
+            console.log(`Connection to peer ${peerId} degraded, reinitializing stream...`);
+            try {
+              // Re-add stream to this specific peer
+              room.addStream(streaming, peerId);
+              peerHealthStatus[peerId].failures = 0;
+            } catch (error) {
+              console.error(`Failed to reinitialize stream for peer ${peerId}:`, error);
+            }
+          }
+        } catch (error) {
+          console.error(`Health check failed for peer ${peerId}:`, error);
+          if (!peerHealthStatus[peerId]) {
+            peerHealthStatus[peerId] = { failures: 0, lastSuccess: Date.now() };
+          }
+          peerHealthStatus[peerId].failures++;
+        }
+      }
+      
+      // Clean up health status for peers that left
+      Object.keys(peerHealthStatus).forEach(peerId => {
+        if (!peers.includes(peerId)) {
+          delete peerHealthStatus[peerId];
+        }
+      });
+    }, 30000); // Check every 30 seconds
+  }
+  
+  // Monitor for stream errors and attempt recovery
+  function monitorStreamHealth(stream, streamType = 'media') {
+    if (!stream) return;
+    
+    stream.getTracks().forEach(track => {
+      track.addEventListener('ended', () => {
+        console.log(`${streamType} track ended unexpectedly, attempting recovery...`);
+        if (streaming && streamType === 'media') {
+          // Attempt to recover the stream
+          handleStreamError();
+        }
+      });
+      
+      track.addEventListener('mute', () => {
+        console.log(`${streamType} track muted unexpectedly`);
+      });
+    });
+  }
+  
+  // Handle stream errors with auto-recovery
+  async function handleStreamError() {
+    if (!streaming) return;
+    
+    console.log('Attempting to recover media stream...');
+    
+    try {
+      // Try to get a new stream
+      const newStream = await navigator.mediaDevices.getUserMedia(features);
+      
+      // Remove old stream
+      room.removeStream(streaming);
+      const oldTracks = streaming.getTracks();
+      oldTracks.forEach(track => track.stop());
+      
+      // Add new stream
+      room.addStream(newStream);
+      handleStream(newStream, selfId);
+      streaming = newStream;
+      startAudioViz(newStream);
+      monitorStreamHealth(newStream, 'media');
+      
+      console.log('Media stream recovered successfully');
+    } catch (error) {
+      console.error('Failed to recover media stream:', error);
+      // Notify user of the failure
+      notifyMe('Connection lost. Please rejoin the call.');
+    }
   }
   
   // EXPERIMENTAL ROOM INDEXING!
@@ -897,21 +1041,46 @@ var start = function() {
   var screenSharing = false;
   window.shareScreen = async function() {
     if (!screenSharing) {
-      var stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        frameRate: 5
-      });
-      if (sendCmd) {
-        sendCmd({
-          peerId: selfId + "_screen",
-          cmd: "screenshare",
-          stream: stream.id
+      try {
+        var stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          frameRate: 5
         });
+        
+        // Monitor screen share track for when user stops sharing
+        stream.getTracks()[0].addEventListener('ended', () => {
+          console.log('Screen share ended by user');
+          if (screenSharing) {
+            // Clean up when user clicks "Stop sharing" in browser UI
+            if (sendCmd) {
+              sendCmd({
+                peerId: peerId,
+                cmd: "stop_screenshare",
+                stream: screenSharing.id
+              });
+            }
+            room.removeStream(screenSharing);
+            shareScreenButton.classList.remove("blinking");
+            shareView.srcObject = null;
+            screenSharing = false;
+          }
+        });
+        
+        if (sendCmd) {
+          sendCmd({
+            peerId: selfId + "_screen",
+            cmd: "screenshare",
+            stream: stream.id
+          });
+        }
+        room.addStream(stream);
+        shareScreenButton.classList.add("blinking");
+        screenSharing = stream;
+        shareView.srcObject = screenSharing;
+      } catch (error) {
+        console.error('Failed to start screen sharing:', error);
+        notifyMe('Failed to start screen sharing. Please try again.');
       }
-      room.addStream(stream);
-      shareScreenButton.classList.add("blinking");
-      screenSharing = stream;
-      shareView.srcObject = screenSharing;
     } else {
       if (sendCmd) {
         sendCmd({
@@ -969,7 +1138,27 @@ var start = function() {
   window.getRoomName = getRoomName;
   
   function reJoinRoom() {
-    window.room.leave();
+    // Clean up health check interval
+    if (healthCheckInterval) {
+      clearInterval(healthCheckInterval);
+      healthCheckInterval = null;
+    }
+    
+    // Stop all tracks before leaving
+    if (streaming) {
+      streaming.getTracks().forEach(track => track.stop());
+      streaming = null;
+    }
+    if (screenSharing) {
+      screenSharing.getTracks().forEach(track => track.stop());
+      screenSharing = false;
+    }
+    
+    // Leave the room
+    if (window.room) {
+      window.room.leave();
+    }
+    
     Swal.fire(
       "Disconnected!",
       "Click to Rejoin",
