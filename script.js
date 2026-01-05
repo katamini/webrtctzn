@@ -4,6 +4,50 @@ const lru = new quickLru({maxSize: 1000});
 
 var doc = {};
 
+// YouTube player state - module level to be accessible by API callback
+let youtubePlayer = null;
+let currentVideoId = null;
+let isSyncingYouTube = false;
+let lastSeekTime = 0;
+let seekCheckInterval = null;
+let youtubeCallbacks = {}; // Store callbacks from start() function
+
+// YouTube IFrame API ready callback - must be at module level
+window.onYouTubeIframeAPIReady = function() {
+  console.log('YouTube IFrame API ready');
+  
+  if (typeof YT === 'undefined' || !YT.Player) {
+    console.error('YouTube API not loaded properly');
+    return;
+  }
+  
+  youtubePlayer = new YT.Player('youtube-player', {
+    height: '100%',
+    width: '100%',
+    videoId: '', // Start with no video
+    playerVars: {
+      autoplay: 0,
+      controls: 1,
+      modestbranding: 1,
+      rel: 0,
+      fs: 1
+    },
+    events: {
+      onReady: (event) => {
+        console.log('YouTube player ready');
+        if (youtubeCallbacks.startYouTubeSeekTracking) {
+          youtubeCallbacks.startYouTubeSeekTracking();
+        }
+      },
+      onStateChange: (event) => {
+        if (youtubeCallbacks.handleYouTubePlayerStateChange) {
+          youtubeCallbacks.handleYouTubePlayerStateChange(event);
+        }
+      }
+    }
+  });
+};
+
 var start = function() {
   const byId = document.getElementById.bind(document);
   const canvas = byId("canvas");
@@ -282,13 +326,6 @@ applyGrid();
   let sendPic;
   let sendYouTubeAction;
 
-  // YouTube player state
-  let youtubePlayer = null;
-  let currentVideoId = null;
-  let isSyncingYouTube = false;
-  let lastSeekTime = 0;
-  let seekCheckInterval = null;
-
   const peerAlias = {};
 
   var streams = [];
@@ -297,6 +334,10 @@ applyGrid();
   var peerId = selfId + "_call";
   var userName = false;
   var roomName = false;
+
+  // Stream health monitoring variables - declared before init()
+  let healthCheckInterval = null;
+  let peerHealthStatus = {};
 
   // Room Selector
   const queryString = window.location.search;
@@ -457,10 +498,6 @@ applyGrid();
   if (storedVideoPref !== null) {
     features.video = storedVideoPref === "true";
   }
-  
-  // Stream health monitoring variables - declared before init()
-  let healthCheckInterval = null;
-  let peerHealthStatus = {};
   
   // Helper function to start streaming with common setup
   async function startStreaming(autoReconnect = false) {
@@ -1349,8 +1386,8 @@ applyGrid();
         setTimeout(() => { isSyncingYouTube = false; }, 500);
       }
     } else {
-      // Player will be created by onYouTubeIframeAPIReady
-      console.log('YouTube player not ready yet');
+      // Player not ready yet - user needs to wait for YouTube API to load
+      console.warn('YouTube player not ready yet. Please wait for the player to initialize.');
     }
     
     // Broadcast to peers if this is a local action
@@ -1442,6 +1479,10 @@ applyGrid();
     
     if (!youtubeInput || !youtubeLoadBtn) return;
     
+    // Register callbacks for module-level YouTube API callback
+    youtubeCallbacks.startYouTubeSeekTracking = startYouTubeSeekTracking;
+    youtubeCallbacks.handleYouTubePlayerStateChange = handleYouTubePlayerStateChange;
+    
     // Helper function to handle video loading from input
     const handleVideoLoad = () => {
       const input = youtubeInput.value.trim();
@@ -1464,45 +1505,15 @@ applyGrid();
     });
     
     youtubeLoadBtn.addEventListener('click', handleVideoLoad);
-  }
-
-  // Make YouTube player available globally for the API callback
-  window.onYouTubeIframeAPIReady = function() {
-    console.log('YouTube IFrame API ready');
     
-    if (typeof YT === 'undefined' || !YT.Player) {
-      console.error('YouTube API not loaded properly');
-      return;
+    // Check if YouTube API is already loaded (in case of page reload)
+    if (typeof YT !== 'undefined' && YT.Player && !youtubePlayer) {
+      setTimeout(() => {
+        if (window.onYouTubeIframeAPIReady) {
+          window.onYouTubeIframeAPIReady();
+        }
+      }, 100);
     }
-    
-    youtubePlayer = new YT.Player('youtube-player', {
-      height: '100%',
-      width: '100%',
-      videoId: '', // Start with no video
-      playerVars: {
-        autoplay: 0,
-        controls: 1,
-        modestbranding: 1,
-        rel: 0,
-        fs: 1
-      },
-      events: {
-        onReady: (event) => {
-          console.log('YouTube player ready');
-          startYouTubeSeekTracking();
-        },
-        onStateChange: handleYouTubePlayerStateChange
-      }
-    });
-  };
-
-  // Check if YouTube API is already loaded (in case of page reload)
-  if (typeof YT !== 'undefined' && YT.Player && !youtubePlayer) {
-    setTimeout(() => {
-      if (window.onYouTubeIframeAPIReady) {
-        window.onYouTubeIframeAPIReady();
-      }
-    }, 100);
   }
 
 };
