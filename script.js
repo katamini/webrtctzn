@@ -403,6 +403,10 @@ var start = function() {
   var streaming = false;
   var muted = false;
   
+  // Stream health monitoring variables - declared before init()
+  let healthCheckInterval = null;
+  let peerHealthStatus = {};
+  
   // Helper function to start streaming with common setup
   async function startStreaming(autoReconnect = false) {
     try {
@@ -541,6 +545,10 @@ var start = function() {
       // Send existing stream to new peer (Trystero best practice)
       if (streaming) {
         room.addStream(streaming, peerId);
+        // Also send the hand command to indicate streaming state
+        if (sendCmd) {
+          sendCmd({ peerId: selfId + "_call", cmd: "hand", state: true }, peerId);
+        }
       }
       // Send screenshare to new peer if active
       if (screenSharing) {
@@ -573,10 +581,6 @@ var start = function() {
       attemptAutoReconnect();
     }, 500);
   }
-  
-  // Stream health monitoring with keepalive pings
-  let healthCheckInterval = null;
-  let peerHealthStatus = {};
   
   // Auto-reconnect function to restore previous streaming state
   async function attemptAutoReconnect() {
