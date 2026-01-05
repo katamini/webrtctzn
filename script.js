@@ -307,7 +307,7 @@ var start = function() {
   if (urlParams.has("audio")) {
     features.video = false;
     talkbutton.innerHTML =
-      '<i class="fa fa-video fa-2x" aria-hidden="true"></i>';
+      '<i class="fa fa-phone fa-2x" aria-hidden="true"></i>';
   }
   // Update button icon based on current video preference
   if (!urlParams.has("video") && !urlParams.has("audio") && features.video) {
