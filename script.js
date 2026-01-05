@@ -123,6 +123,7 @@ var start = function() {
   let vizSource = null;
   let vizData = null;
   let vizRaf = null;
+  let restarting = false;
 
   function applyGrid() {
     if (mainGrid) {
@@ -396,6 +397,10 @@ var start = function() {
 
   var streaming = false;
   var muted = false;
+  const storedVideoPref = localStorage.getItem("videoPreference");
+  if (storedVideoPref !== null) {
+    features.video = storedVideoPref === "true";
+  }
   
   // Stream health monitoring variables - declared before init()
   let healthCheckInterval = null;
@@ -443,9 +448,25 @@ var start = function() {
   const updateVideoToggle = () => {
     if (!videoToggle) return;
     videoToggle.innerText = features.video ? "Video on" : "Enable video";
-    videoToggle.title = features.video ? "Video enabled for the next call" : "Audio-only by default";
+    videoToggle.title = features.video ? "Video enabled" : "Audio-only by default";
+    videoToggle.classList.toggle("active", !!features.video);
   };
   updateVideoToggle();
+
+  async function restartStreamingForToggle() {
+    if (!streaming) return;
+    const wasMuted = muted;
+    room.removeStream(streaming);
+    streaming.getTracks().forEach(track => track.stop());
+    streaming = null;
+    await startStreaming(false);
+    if (streaming && wasMuted) {
+      streaming.getAudioTracks().forEach(track => track.enabled = false);
+      mutebutton.innerHTML =
+        '<i class="fa fa-microphone-slash fa-2x" aria-hidden="true"></i>';
+      muted = true;
+    }
+  }
 
   if (videoToggle) {
     videoToggle.addEventListener("click", () => {
@@ -454,7 +475,7 @@ var start = function() {
       localStorage.setItem("videoPreference", features.video.toString());
       updateVideoToggle();
       if (streaming) {
-        videoToggle.title = "Video preference will apply on the next call.";
+        restartStreamingForToggle();
       }
     });
   }
@@ -766,19 +787,9 @@ var start = function() {
             if (data.focus == "hidden") el.classList.add("handoff");
             else el.classList.remove("handoff");
           }
-          el = byId("circle_" + id);
-          if (el) {
-            if (data.focus == "hidden") el.classList.add("handoff");
-            else el.classList.remove("handoff");
-          }
         } else {
           // handle state
           var el = byId("hand_" + id);
-          if (el) {
-            if (data.state) el.classList.add("handgreen");
-            else el.classList.remove("handgreen");
-          }
-          el = byId("circle_" + id);
           if (el) {
             if (data.state) el.classList.add("handgreen");
             else el.classList.remove("handgreen");
