@@ -67,7 +67,6 @@ var start = function() {
   let isMobile = mobileQuery.matches;
   let activeMobile = "chat";
   const whoList = null;
-  const peerAvatar = {};
 
   const circle = null;
   const chat = byId("chat");
@@ -1569,6 +1568,7 @@ applyGrid();
   window.getUserName = getUserName;
   
   function getRoomName() {
+    // Call unified setup dialog (username, room, avatar)
     getUserSetup();
   }
   window.getRoomName = getRoomName;
