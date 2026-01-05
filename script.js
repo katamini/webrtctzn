@@ -12,12 +12,11 @@ var start = function() {
   const drawSurface = byId("draw-surface");
   const mainGrid = byId("main-grid");
   const outerHandles = document.querySelectorAll(".resize-layer.outer .resize-handle.col");
-  const centerRowHandles = document.querySelectorAll(".resize-layer.center-row .resize-handle.row");
+  const rowHandles = document.querySelectorAll(".resize-layer.outer .resize-handle.row");
   const videoToggle = byId("video-toggle");
   const videoFeed = byId("video-feed");
   const chatSend = byId("chat-send");
   const audioViz = byId("audio-visualizer");
-  const centerGrid = byId("center-grid");
   const whoList = byId("who-list");
 
   const circle = null;
@@ -111,10 +110,10 @@ var start = function() {
     draw();
   }
 
-  const defaultColPerc = [25, 60, 15];
-  const defaultCenterRows = [60, 40];
+  const defaultColPerc = [25, 25, 25, 25];
+  const defaultRowPerc = [60, 40];
   let colPerc = [...defaultColPerc];
-  let centerRowPerc = [...defaultCenterRows];
+  let rowPerc = [...defaultRowPerc];
   const minCol = 10;
   const minRow = 15;
   let expandedTile = null;
@@ -130,10 +129,9 @@ var start = function() {
       mainGrid.style.setProperty("--col-1", colPerc[0] + "%");
       mainGrid.style.setProperty("--col-2", colPerc[1] + "%");
       mainGrid.style.setProperty("--col-3", colPerc[2] + "%");
-    }
-    if (centerGrid) {
-      centerGrid.style.setProperty("--c-row-1", centerRowPerc[0] + "%");
-      centerGrid.style.setProperty("--c-row-2", centerRowPerc[1] + "%");
+      mainGrid.style.setProperty("--col-4", colPerc[3] + "%");
+      mainGrid.style.setProperty("--row-1", rowPerc[0] + "%");
+      mainGrid.style.setProperty("--row-2", rowPerc[1] + "%");
     }
 
     if (outerHandles && outerHandles.length) {
@@ -145,16 +143,12 @@ var start = function() {
       });
     }
 
-    if (centerRowHandles && centerRowHandles.length) {
-      const totalRows = centerRowPerc.reduce((a, b) => a + b, 0);
-      const leftOffset = colPerc[0];
-      const widthPerc = colPerc[1];
-      centerRowHandles.forEach(handle => {
+    if (rowHandles && rowHandles.length) {
+      const totalRows = rowPerc.reduce((a, b) => a + b, 0);
+      rowHandles.forEach(handle => {
         const idx = Number(handle.dataset.index);
-        const rowAcc = centerRowPerc.slice(0, idx + 1).reduce((a, b) => a + b, 0);
+        const rowAcc = rowPerc.slice(0, idx + 1).reduce((a, b) => a + b, 0);
         handle.style.top = (rowAcc / totalRows) * 100 + "%";
-        handle.style.left = leftOffset + "%";
-        handle.style.right = (100 - leftOffset - widthPerc) + "%";
       });
     }
   }
@@ -168,9 +162,9 @@ var start = function() {
       const startX = e.clientX;
       const startY = e.clientY;
       const startCols = [...colPerc];
-      const startRows = [...centerRowPerc];
+      const startRows = [...rowPerc];
       const gridWidth = mainGrid ? mainGrid.clientWidth : window.innerWidth;
-      const gridHeight = centerGrid ? centerGrid.clientHeight : window.innerHeight;
+      const gridHeight = mainGrid ? mainGrid.clientHeight : window.innerHeight;
       function onMove(evt) {
         if (isCol) {
           const deltaPx = evt.clientX - startX;
@@ -188,15 +182,15 @@ var start = function() {
           let b = startRows[idx + 1] - deltaPercent;
           if (a < minRow) { b -= minRow - a; a = minRow; }
           if (b < minRow) { a -= minRow - b; b = minRow; }
-          centerRowPerc[idx] = a;
-          centerRowPerc[idx + 1] = b;
+          rowPerc[idx] = a;
+          rowPerc[idx + 1] = b;
         }
         const colTotal = colPerc.reduce((p, c) => p + c, 0);
-        const rowTotal = centerRowPerc.reduce((p, c) => p + c, 0);
+        const rowTotal = rowPerc.reduce((p, c) => p + c, 0);
         const colScale = 100 / colTotal;
         const rowScale = 100 / rowTotal;
         colPerc = colPerc.map(v => v * colScale);
-        centerRowPerc = centerRowPerc.map(v => v * rowScale);
+        rowPerc = rowPerc.map(v => v * rowScale);
         applyGrid();
         setWhiteboardSize();
         resizeAudioViz();
@@ -211,7 +205,7 @@ var start = function() {
   }
 
   outerHandles.forEach(bindResize);
-  centerRowHandles.forEach(bindResize);
+  rowHandles.forEach(bindResize);
   window.addEventListener("resize", () => {
     applyGrid();
     setWhiteboardSize();
