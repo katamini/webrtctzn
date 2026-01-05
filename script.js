@@ -1352,12 +1352,13 @@ applyGrid();
     // - Live: youtube.com/live/VIDEO_ID
     // - Mobile: m.youtube.com/watch?v=VIDEO_ID (and other subdomains)
     const patterns = [
-      // Match youtu.be short URLs and all /path/VIDEO_ID formats with optional subdomains
-      // Non-capturing group (?:^|[^a-zA-Z0-9-]) ensures we don't match fake domains like "notyoutube.com"
-      /(?:youtu\.be\/|(?:^|[^a-zA-Z0-9-])(?:[a-zA-Z0-9-]+\.)?youtube(?:-nocookie)?\.com\/(?:embed|shorts|live)\/)([a-zA-Z0-9_-]{11})/,
+      // Match youtu.be short URLs (with boundary check to prevent fake domains)
+      /(?:^|[^a-zA-Z0-9-])youtu\.be\/([a-zA-Z0-9_-]{11})/,
+      // Match all /path/VIDEO_ID formats with optional subdomains (embed, shorts, live)
+      /(?:^|[^a-zA-Z0-9-])(?:[a-zA-Z0-9-]+\.)?youtube(?:-nocookie)?\.com\/(?:embed|shorts|live)\/([a-zA-Z0-9_-]{11})/,
       // Match watch URLs with v parameter (works with any subdomain like m.youtube.com)
-      // Non-capturing group (?:^|[^a-zA-Z0-9-]) ensures we don't match fake domains
-      /(?:^|[^a-zA-Z0-9-])(?:[a-zA-Z0-9-]+\.)?youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/
+      // Uses [^\s]* instead of .* to avoid matching across line boundaries
+      /(?:^|[^a-zA-Z0-9-])(?:[a-zA-Z0-9-]+\.)?youtube\.com\/watch\?[^\s]*v=([a-zA-Z0-9_-]{11})/
     ];
     
     for (const pattern of patterns) {
