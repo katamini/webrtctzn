@@ -385,15 +385,15 @@ applyGrid();
   const cursors = {};
   const roomCap = 33;
   const avatars = [
-    "static/avatars/avatar_01.png",
-    "static/avatars/avatar_02.png",
-    "static/avatars/avatar_03.png",
-    "static/avatars/avatar_04.png",
-    "static/avatars/avatar_05.png",
-    "static/avatars/avatar_06.png",
-    "static/avatars/avatar_07.png",
-    "static/avatars/avatar_08.png",
-    "static/avatars/avatar_09.png",
+    "static/avatars/avatar_1.png",
+    "static/avatars/avatar_2.png",
+    "static/avatars/avatar_3.png",
+    "static/avatars/avatar_4.png",
+    "static/avatars/avatar_5.png",
+    "static/avatars/avatar_6.png",
+    "static/avatars/avatar_7.png",
+    "static/avatars/avatar_8.png",
+    "static/avatars/avatar_9.png",
     "static/avatars/avatar_10.png"
   ];
   const peerAvatar = {};
@@ -417,6 +417,7 @@ applyGrid();
   var peerId = selfId + "_call";
   var userName = false;
   var roomName = false;
+  var userAvatar = null; // User's selected avatar
 
   // Stream health monitoring variables - declared before init()
   let healthCheckInterval = null;
@@ -464,6 +465,14 @@ applyGrid();
       getUserName();
       //localStorage.setItem("username", userName);
     }
+  }
+  
+  // Load user's avatar from localStorage
+  userAvatar = localStorage.getItem("userAvatar");
+  if (!userAvatar && avatars.length > 0) {
+    // Default to first avatar if none selected
+    userAvatar = avatars[0];
+    localStorage.setItem("userAvatar", userAvatar);
   }
 
   // Store room name in localStorage for reconnection
@@ -592,6 +601,9 @@ applyGrid();
       startAudioViz(stream);
       monitorStreamHealth(stream, 'media');
       muted = false;
+      // Hide avatar when streaming starts
+      const selfAvatar = byId("avatar_" + selfId);
+      if (selfAvatar && features.video) selfAvatar.style.display = "none";
       talkbutton.innerHTML = !features.video
         ? '<i class="fa fa-phone fa-2x" aria-hidden="true" style="color:white;"></i>'
         : '<i class="fa fa-video fa-2x" aria-hidden="true" style="color:white;"></i>';
@@ -667,10 +679,13 @@ applyGrid();
         track.stop();
       });
       var el = byId("vid_" + selfId);
-      el.srcObject = null;
+      if (el) el.srcObject = null;
       streaming = null;
       // Clear streaming state - user manually disconnected
       localStorage.removeItem("wasStreaming");
+      // Show avatar when streaming stops
+      const selfAvatar = byId("avatar_" + selfId);
+      if (selfAvatar) selfAvatar.style.display = "flex";
       // reset mute
       mutebutton.innerHTML =
         '<i class="fa fa-microphone fa-2x" aria-hidden="true"></i>';
@@ -1052,7 +1067,8 @@ applyGrid();
         el.setAttribute("width", 480);
         el.srcObject = stream;
         const av = byId("avatar_" + peerId);
-        if (av) av.style.display = stream ? "none" : "flex";
+        // Hide avatar when stream is active, show when stream stops
+        if (av) av.style.display = stream && stream.getVideoTracks().length > 0 ? "none" : "flex";
       }, 200);
     }
   }
@@ -1094,7 +1110,8 @@ applyGrid();
       const avatarWrap = document.createElement("div");
       avatarWrap.className = "video-avatar";
       const avatarImg = document.createElement("img");
-      const pick = avatars[Math.floor(Math.random() * avatars.length)];
+      // Use stored avatar for self, random for others
+      const pick = isSelf && userAvatar ? userAvatar : avatars[Math.floor(Math.random() * avatars.length)];
       peerAvatar[id] = pick;
       avatarImg.src = pick;
       avatarWrap.appendChild(avatarImg);
@@ -1367,16 +1384,180 @@ applyGrid();
     }
   };
 
-  function getUserName() {
+  // Unified setup function for first-time users (username, room, avatar)
+  function getUserSetup() {
+    // Get saved values for pre-filling
+    const savedUsername = localStorage.getItem("username") || "";
+    const savedRoom = localStorage.getItem("lastRoom") || "";
+    const savedAvatar = localStorage.getItem("userAvatar") || "";
+    
+    // Build avatar selection HTML
+    const avatarGrid = avatars.map((avatar, index) => {
+      const avatarNum = index + 1;
+      const isSelected = savedAvatar === avatar ? 'border-color: #3085d6;' : 'border-color: #ddd;';
+      return `
+        <div class="avatar-card" data-avatar="${avatar}" style="cursor: pointer; border: 2px solid #ddd; border-radius: 8px; padding: 8px; transition: border-color 0.3s; ${isSelected}">
+          <img src="${avatar}" alt="Avatar ${avatarNum}" style="width: 128px; height: 128px; display: block; border-radius: 4px;">
+          <p style="margin-top: 5px; font-size: 12px; text-align: center;">${avatarNum}</p>
+        </div>
+      `;
+    }).join('');
+    
     Swal.fire({
-      title: "Hey Stranger!",
-      text: "Choose a Username:",
-      input: "text"
+      title: 'Join Room',
+      html: `
+        <div style="text-align: left;">
+          <label for="username" style="display: block; margin-bottom: 5px; font-weight: bold;">Name:</label>
+          <input type="text" id="username" class="swal2-input" placeholder="Enter your username" value="${savedUsername}" style="margin-top: 0;">
+          
+          <label for="roomname" style="display: block; margin-bottom: 5px; margin-top: 15px; font-weight: bold;">Room Name:</label>
+          <input type="text" id="roomname" class="swal2-input" placeholder="Enter room name" value="${savedRoom}" style="margin-top: 0;">
+          
+          <label style="display: block; margin-bottom: 10px; margin-top: 15px; font-weight: bold;">Choose an Avatar:</label>
+          <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-height: 300px; overflow-y: auto; padding: 5px;">
+            ${avatarGrid}
+          </div>
+          <input type="hidden" id="selectedAvatar" value="${savedAvatar}">
+        </div>
+      `,
+      width: '600px',
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Join',
+      cancelButtonText: 'Cancel',
+      didOpen: () => {
+        // Add click handlers for avatar cards
+        const cards = document.querySelectorAll('.avatar-card');
+        cards.forEach(card => {
+          card.addEventListener('click', function() {
+            // Remove selection from all cards
+            cards.forEach(c => c.style.borderColor = '#ddd');
+            // Add selection to clicked card
+            this.style.borderColor = '#3085d6';
+            // Store selected value
+            document.getElementById('selectedAvatar').value = this.dataset.avatar;
+          });
+        });
+      },
+      preConfirm: () => {
+        const username = document.getElementById('username').value.trim();
+        const roomname = document.getElementById('roomname').value.trim();
+        const selectedAvatar = document.getElementById('selectedAvatar').value;
+        
+        if (!username) {
+          Swal.showValidationMessage('Please enter a username');
+          return false;
+        }
+        
+        if (!roomname) {
+          Swal.showValidationMessage('Please enter a room name');
+          return false;
+        }
+        
+        if (!selectedAvatar) {
+          Swal.showValidationMessage('Please select an avatar');
+          return false;
+        }
+        
+        return { username, roomname, selectedAvatar };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        // Store in localStorage
+        localStorage.setItem("username", result.value.username);
+        localStorage.setItem("userAvatar", result.value.selectedAvatar);
+        localStorage.setItem("lastRoom", result.value.roomname);
+        
+        // Redirect to room
+        var target = location.protocol + '//' + location.host + location.pathname + '?room=' + result.value.roomname;
+        window.location = target;
+      }
+    });
+  }
+  window.getUserSetup = getUserSetup;
+
+  function getUserName() {
+    // Get saved values for pre-filling
+    const savedUsername = localStorage.getItem("username") || "";
+    const savedAvatar = localStorage.getItem("userAvatar") || "";
+    
+    // Build avatar selection HTML
+    const avatarGrid = avatars.map((avatar, index) => {
+      const avatarNum = index + 1;
+      const isSelected = savedAvatar === avatar ? 'border-color: #3085d6;' : 'border-color: #ddd;';
+      return `
+        <div class="avatar-card" data-avatar="${avatar}" style="cursor: pointer; border: 2px solid #ddd; border-radius: 8px; padding: 8px; transition: border-color 0.3s; ${isSelected}">
+          <img src="${avatar}" alt="Avatar ${avatarNum}" style="width: 128px; height: 128px; display: block; border-radius: 4px;">
+          <p style="margin-top: 5px; font-size: 12px; text-align: center;">${avatarNum}</p>
+        </div>
+      `;
+    }).join('');
+    
+    Swal.fire({
+      title: "Change Username & Avatar",
+      html: `
+        <div style="text-align: left;">
+          <label for="username" style="display: block; margin-bottom: 5px; font-weight: bold;">Name:</label>
+          <input type="text" id="username" class="swal2-input" placeholder="Enter your username" value="${savedUsername}" style="margin-top: 0;">
+          
+          <label style="display: block; margin-bottom: 10px; margin-top: 15px; font-weight: bold;">Choose an Avatar:</label>
+          <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-height: 300px; overflow-y: auto; padding: 5px;">
+            ${avatarGrid}
+          </div>
+          <input type="hidden" id="selectedAvatar" value="${savedAvatar}">
+        </div>
+      `,
+      width: '600px',
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Save',
+      cancelButtonText: 'Cancel',
+      didOpen: () => {
+        // Add click handlers for avatar cards
+        const cards = document.querySelectorAll('.avatar-card');
+        cards.forEach(card => {
+          card.addEventListener('click', function() {
+            // Remove selection from all cards
+            cards.forEach(c => c.style.borderColor = '#ddd');
+            // Add selection to clicked card
+            this.style.borderColor = '#3085d6';
+            // Store selected value
+            document.getElementById('selectedAvatar').value = this.dataset.avatar;
+          });
+        });
+      },
+      preConfirm: () => {
+        const username = document.getElementById('username').value.trim();
+        const selectedAvatar = document.getElementById('selectedAvatar').value;
+        
+        if (!username) {
+          Swal.showValidationMessage('Please enter a username');
+          return false;
+        }
+        
+        if (!selectedAvatar) {
+          Swal.showValidationMessage('Please select an avatar');
+          return false;
+        }
+        
+        return { username, selectedAvatar };
+      }
     }).then(result => {
-      if (result.value) {
-        //console.log('got username',result.value)
-        userName = result.value || selfId;
+      if (result.isConfirmed && result.value) {
+        userName = result.value.username;
+        userAvatar = result.value.selectedAvatar;
         localStorage.setItem("username", userName);
+        localStorage.setItem("userAvatar", userAvatar);
+        
+        // Update avatar display if it exists
+        const selfAvatarEl = byId("avatar_" + selfId);
+        if (selfAvatarEl) {
+          const avatarImg = selfAvatarEl.querySelector('img');
+          if (avatarImg) {
+            avatarImg.src = userAvatar;
+          }
+        }
+        
         if (sendCmd) {
           sendCmd({ peerId: selfId, cmd: "username", username: userName });
         }
@@ -1388,19 +1569,7 @@ applyGrid();
   window.getUserName = getUserName;
   
   function getRoomName() {
-    Swal.fire({
-      title: "Welcome Stranger!",
-      text: "Create or Join a Room",
-      input: "text",
-      inputPlaceholder: "lobby"
-    }).then(result => {
-      if (result.value) {
-        //console.log('got username',result.value)
-        if (!result.value) result.value = 'lobby';
-        var target = location.protocol + '//' + location.host + location.pathname + '?room=' + result.value;
-        window.location = target;
-      }
-    });
+    getUserSetup();
   }
   window.getRoomName = getRoomName;
   
