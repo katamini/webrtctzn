@@ -135,7 +135,7 @@ var start = function() {
     vizSource.connect(analyser);
 
     const ctx = audioViz.getContext("2d");
-    const bars = 32;
+    const bars = 16;
     const draw = () => {
       vizRaf = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(vizData);
@@ -143,16 +143,17 @@ var start = function() {
       const height = audioViz.height || 1;
       ctx.clearRect(0, 0, width, height);
       const grad = ctx.createLinearGradient(0, 0, 0, height);
-      grad.addColorStop(0, "#f0f0f0");
-      grad.addColorStop(0.5, "#a6a6a6");
-      grad.addColorStop(1, "#4d4d4d");
+      grad.addColorStop(0, "#d9d9d9");
+      grad.addColorStop(1, "#3a3a3a");
       const slice = Math.max(1, Math.floor(vizData.length / bars));
       const barWidth = width / bars;
       for (let i = 0; i < bars; i++) {
         const v = vizData[i * slice] / 255;
         const barHeight = v * height;
         ctx.fillStyle = grad;
-        ctx.fillRect(i * barWidth, height - barHeight, barWidth * 0.75, barHeight);
+        const gap = 2;
+        const usableWidth = barWidth - gap;
+        ctx.fillRect(i * barWidth + gap / 2, height - barHeight, usableWidth, barHeight);
       }
     };
     draw();
