@@ -1221,7 +1221,7 @@ applyGrid();
       const label = document.createElement("div");
       label.className = "video-label";
       label.id = "label_" + id;
-      label.innerText = isSelf ? (userName || "you") : id.slice(0, 8);
+      label.innerText = isSelf ? (userName || "") : "";
       avatarWrap.id = "avatar_" + id;
       frame.appendChild(avatarWrap);
       frame.appendChild(video);
