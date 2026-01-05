@@ -805,9 +805,6 @@ body {
   }
   .tile {
     min-height: 240px;
-    display: none;
-  }
-  .tile.mobile-active {
     display: flex;
   }
   .resize-layer {

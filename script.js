@@ -1364,7 +1364,7 @@ applyGrid();
     }).then(result => {
       if (result.value) {
         //console.log('got username',result.value)
-        if (!result.value || result.value.length < 4) result.value = 'lobby';
+        if (!result.value) result.value = 'lobby';
         var target = location.protocol + '//' + location.host + location.pathname + '?room=' + result.value;
         window.location = target;
       }
