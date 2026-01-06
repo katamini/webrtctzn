@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, user-scalable=yes" />
     <title>webRTCTZN 2.0</title>
     <link rel="preconnect" href="https://fonts.gstatic.com" />
-    <link href="static/favicon.png" rel="icon" type="image/png" />
+    <link href="static/hand.png" rel="icon" type="image/png" />
     <link
       href="https://fonts.googleapis.com/css2?family=Space+Mono:ital@0;1&display=swap"
       rel="stylesheet"
@@ -71,7 +71,7 @@
 
             <section class="tile video" data-tile="video">
               <div class="tile-head">
-                <div class="tile-title">FRIENDS</div>
+                <div class="tile-title">ROOM</div>
                 <div class="tile-actions">
                   <button title="Join / leave call" type="button" id="talkbutton" class="pill-btn">
                     <i class="fa fa-phone fa-2x" aria-hidden="true"></i>
@@ -88,15 +88,16 @@
             </section>
 
             <section class="tile screen" data-tile="screen">
-            <div class="tile-head">
-              <div class="tile-title">SCREEN</div>
-              <button title="Share your screen" type="button" id="share-screen" class="ghost-btn" onClick="shareScreen()">
-                <i class="fa fa-object-group" aria-hidden="true"></i>
-              </button>
-            </div>
-            <div class="screen-view">
-              <video id="shareview" class="overtop" src="" autoplay></video>
-            </div>
+              <div class="tile-head">
+                <div class="tile-title">SCREEN</div>
+                <button title="Share your screen" type="button" id="share-screen" class="ghost-btn" onClick="shareScreen()">
+                  <i class="fa fa-object-group" aria-hidden="true"></i>
+                  <span>Share</span>
+                </button>
+              </div>
+              <div class="screen-view">
+                <video id="shareview" class="overtop" src="" autoplay></video>
+              </div>
             </section>
 
             <section class="tile draw" data-tile="draw">
@@ -105,6 +106,7 @@
                 <div class="tile-actions">
                   <button title="Clear whiteboard" type="button" id="clear-button" class="ghost-btn" onClick="clearCanvas()">
                     <i class="fa fa-rotate-left" aria-hidden="true"></i>
+                    <span>Clear</span>
                   </button>
                 </div>
               </div>
@@ -138,9 +140,6 @@
             <section class="tile file" data-tile="file">
               <div class="tile-head">
                 <div class="tile-title">FILE</div>
-                <button type="button" id="share-button" class="ghost-btn" onClick="shareUrl()">
-                  <i class="fa fa-share-alt" aria-hidden="true"></i>
-                </button>
               </div>
               <div class="file-drop" id="file-drop" ondrop="drop(event)" ondragover="allowDrop(event)">
                 <p>Drop an image here to share to the board.</p>
@@ -171,20 +170,16 @@
             </section>
             <section class="tile settings" data-tile="settings">
               <div class="tile-head">
-              <div class="tile-title">SETTINGS</div>
-            </div>
-            <div class="who-body">
-              <div class="settings-body">
-                <button type="button" id="theme-toggle" class="ghost-btn">Light theme</button>
-                <button type="button" id="settings-button" class="ghost-btn" onClick="shareUrl()">
-                  <i class="fa fa-share-alt" aria-hidden="true"></i>
-                  <span>Share room link</span>
-                </button>
-                <button type="button" class="ghost-btn" onClick="getUserName()">Change name</button>
-                <button type="button" class="ghost-btn" onClick="reJoinRoom()">Reconnect</button>
+                <div class="tile-title">SETTINGS</div>
               </div>
-              <img src="./logo.png" alt="OLTRA" class="who-logo" />
-            </div>
+              <div class="who-body">
+                <div class="settings-body">
+                  <button type="button" class="ghost-btn" onClick="shareUrl()">Share room link</button>
+                  <button type="button" class="ghost-btn" onClick="getUserName()">Change name</button>
+                  <button type="button" class="ghost-btn" onClick="reJoinRoom()">Reconnect</button>
+                </div>
+                <img src="./logo.png" alt="OLTRA" class="who-logo" />
+              </div>
             </section>
           </div>
           <div id="peer-grid" style="display:none;"></div>
@@ -208,13 +203,9 @@
         &times;</a
       >
       <a href="#" onClick="getUserName();closeNav()">Change Name</a>
-      <a href="#" onClick="shareScreen();closeNav()">
-        <i class="fa fa-object-group" aria-hidden="true"></i>
-      </a>
+      <a href="#" onClick="shareScreen();closeNav()">Share Screen</a>
       <a href="#" onclick="event.preventDefault(); location+='&video'">Enable Video</a>
-      <a href="#" onClick="shareUrl();closeNav()">
-        <i class="fa fa-share-alt" aria-hidden="true"></i>
-      </a>
+      <a href="#" onClick="shareUrl();closeNav()">Share Room Link</a>
       <a href="#" onClick="window.open(window.location.href);closeNav(); window.reJoinRoom();">Open in New Tab</a>
     </div>
   </body>
