@@ -1576,19 +1576,12 @@ applyGrid();
     ctx.lineWidth = 1;
     ctx.moveTo(plots[0].x * whiteboard.width, plots[0].y * whiteboard.height);
     for (var i = 1; i < plots.length; i++) {
-      fadeOutCanvas();
       ctx.lineTo(
         plots[i].x * whiteboard.width,
         plots[i].y * whiteboard.height
       );
     }
     ctx.stroke();
-  }
-
-  
-  function fadeOutCanvas() {
-    ctx.fillStyle = "rgba(255,255,255,0.02)";
-    ctx.fillRect(0, 0, whiteboard.width, whiteboard.height);
   }
 
   var screenSharing = false;
