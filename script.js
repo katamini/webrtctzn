@@ -71,7 +71,6 @@ var start = function() {
   const mobileHandle = byId("mobile-handle");
   let isMobile = mobileQuery.matches;
   let activeMobile = "chat";
-  const blobNodes = new Set();
   const whoList = null;
 
   const circle = null;
@@ -225,17 +224,6 @@ var start = function() {
     const draw = () => {
       vizRaf = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(vizData);
-      let energy = 0;
-      for (let i = 0; i < vizData.length; i++) {
-        energy += vizData[i] / 255;
-      }
-      energy = energy / vizData.length;
-      const depthLevel = Math.min(1.0, 0.25 + energy * 0.9);
-      blobNodes.forEach(node => {
-        if (node && node.style) {
-          node.style.setProperty("--depth", depthLevel.toFixed(3));
-        }
-      });
       const width = audioViz.width || 1;
       const height = audioViz.height || 1;
       ctx.clearRect(0, 0, width, height);
@@ -1234,15 +1222,6 @@ applyGrid();
       const frame = document.createElement("div");
       frame.className = "video-frame";
       frame.id = "frame_" + id;
-      const blobBg = document.createElement("div");
-      blobBg.className = "blob-bg";
-      const blob = document.createElement("div");
-      blob.className = "blob";
-      blob.style.setProperty("--depth", "0.25");
-      const blobShape = document.createElement("div");
-      blobShape.className = "blob-shape";
-      blob.appendChild(blobShape);
-      blobBg.appendChild(blob);
       const avatarWrap = document.createElement("div");
       avatarWrap.className = "video-avatar";
       const avatarImg = document.createElement("img");
@@ -1256,12 +1235,10 @@ applyGrid();
       label.id = "label_" + id;
       label.innerText = isSelf ? (userName || "") : "";
       avatarWrap.id = "avatar_" + id;
-      frame.appendChild(blobBg);
       frame.appendChild(avatarWrap);
       frame.appendChild(video);
       frame.appendChild(label);
       videoFeed.appendChild(frame);
-      blobNodes.add(blob);
     }
 
     if (!isSelf) {
