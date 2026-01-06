@@ -61,7 +61,6 @@ var start = function() {
   const videoToggle = byId("video-toggle");
   const videoFeed = byId("videochatbox");
   const chatSend = byId("chat-send");
-  const audioViz = byId("audio-visualizer");
   const tiles = Array.from(document.querySelectorAll(".tile"));
   const mobileTabs = document.querySelectorAll(".mobile-tab");
   const mobileQuery = window.matchMedia("(max-width: 720px)");
@@ -186,63 +185,65 @@ var start = function() {
     });
   }
 
-  function resizeAudioViz() {
-    if (!audioViz) return;
-    audioViz.width = audioViz.clientWidth;
-    audioViz.height = audioViz.clientHeight || 90;
-  }
-  resizeAudioViz();
+  // Audio level detection for avatar animation
+  let audioCtx = null;
+  let analyser = null;
+  let audioSource = null;
+  let audioRaf = null;
 
-  function stopAudioViz() {
-    if (vizRaf) cancelAnimationFrame(vizRaf);
-    vizRaf = null;
-    if (vizSource) {
-      try { vizSource.disconnect(); } catch (e) {}
+  function stopAudioDetection() {
+    if (audioRaf) {
+      cancelAnimationFrame(audioRaf);
+      audioRaf = null;
     }
-    vizSource = null;
-    if (audioViz) {
-      const ctx = audioViz.getContext("2d");
-      ctx.clearRect(0, 0, audioViz.width, audioViz.height);
+    if (audioSource) {
+      try { audioSource.disconnect(); } catch (e) {}
+      audioSource = null;
+    }
+    // Reset avatar scale when stopping
+    const selfAvatar = byId("avatar_" + selfId);
+    if (selfAvatar) {
+      selfAvatar.style.transform = "scale(1)";
     }
   }
 
-  function startAudioViz(stream) {
-    if (!audioViz || !stream) return;
-    stopAudioViz();
+  function startAudioDetection(stream) {
+    if (!stream) return;
+    stopAudioDetection();
+    
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
     if (!audioCtx) audioCtx = new AudioCtx();
     if (audioCtx.state === "suspended") audioCtx.resume();
+    
     analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 256;
-    vizData = new Uint8Array(analyser.frequencyBinCount);
-    vizSource = audioCtx.createMediaStreamSource(stream);
-    vizSource.connect(analyser);
+    analyser.fftSize = 64;
+    analyser.smoothingTimeConstant = 0.8;
+    const audioData = new Uint8Array(analyser.frequencyBinCount);
+    audioSource = audioCtx.createMediaStreamSource(stream);
+    audioSource.connect(analyser);
 
-    const ctx = audioViz.getContext("2d");
-    const bars = 16;
-    const draw = () => {
-      vizRaf = requestAnimationFrame(draw);
-      analyser.getByteFrequencyData(vizData);
-      const width = audioViz.width || 1;
-      const height = audioViz.height || 1;
-      ctx.clearRect(0, 0, width, height);
-      const grad = ctx.createLinearGradient(0, 0, 0, height);
-      grad.addColorStop(0, "#777");
-      grad.addColorStop(0.5, "#444");
-      grad.addColorStop(1, "#111");
-      const slice = Math.max(1, Math.floor(vizData.length / bars));
-      const barWidth = width / bars;
-      for (let i = 0; i < bars; i++) {
-        const v = vizData[i * slice] / 255;
-        const barHeight = v * height;
-        ctx.fillStyle = grad;
-        const gap = 2;
-        const usableWidth = barWidth - gap;
-        ctx.fillRect(i * barWidth + gap / 2, height - barHeight, usableWidth, barHeight);
+    const detect = () => {
+      audioRaf = requestAnimationFrame(detect);
+      analyser.getByteFrequencyData(audioData);
+      
+      // Calculate average audio level
+      let sum = 0;
+      for (let i = 0; i < audioData.length; i++) {
+        sum += audioData[i];
+      }
+      const avgLevel = sum / audioData.length / 255;
+      
+      // Animate avatar based on audio level (threshold: 0.1)
+      const selfAvatar = byId("avatar_" + selfId);
+      if (selfAvatar && avgLevel > 0.1) {
+        const scale = 1 + (avgLevel * 0.15); // Scale from 1.0 to 1.15
+        selfAvatar.style.transform = `scale(${scale.toFixed(2)})`;
+      } else if (selfAvatar) {
+        selfAvatar.style.transform = "scale(1)";
       }
     };
-    draw();
+    detect();
   }
 
   const defaultColPercTop = [25, 25, 25, 25];
@@ -255,11 +256,6 @@ var start = function() {
   const minRow = 15;
   let expandedTile = null;
   let savedPerc = null;
-  let audioCtx = null;
-  let analyser = null;
-  let vizSource = null;
-  let vizData = null;
-  let vizRaf = null;
   let restarting = false;
 
   function applyGrid() {
@@ -322,7 +318,6 @@ applyGrid();
       tab.classList.toggle("active", tab.dataset.target === target);
     });
     setWhiteboardSize();
-    resizeAudioViz();
   }
 
   if (isMobile) {
@@ -367,7 +362,6 @@ applyGrid();
       savedPerc = null;
       applyGrid();
       setWhiteboardSize();
-      resizeAudioViz();
       return;
     }
 
@@ -396,7 +390,6 @@ applyGrid();
 
     applyGrid();
     setWhiteboardSize();
-    resizeAudioViz();
   }
 
   function bindResize(handle) {
@@ -447,7 +440,6 @@ applyGrid();
         rowPerc = rowPerc.map(v => v * rowScale);
         applyGrid();
         setWhiteboardSize();
-        resizeAudioViz();
       }
       function onUp() {
         window.removeEventListener("pointermove", onMove);
@@ -464,7 +456,6 @@ applyGrid();
   window.addEventListener("resize", () => {
     applyGrid();
     setWhiteboardSize();
-    resizeAudioViz();
   });
   document.querySelectorAll(".tile-head").forEach(head => {
     head.addEventListener("dblclick", e => {
@@ -701,7 +692,7 @@ applyGrid();
       room.addStream(stream);
       handleStream(stream, selfId);
       streaming = stream;
-      startAudioViz(stream);
+      startAudioDetection(stream);
       monitorStreamHealth(stream, 'media');
       muted = false;
       // Hide avatar when streaming starts
@@ -801,7 +792,7 @@ applyGrid();
         ? '<i class="fa fa-phone fa-2x" aria-hidden="true" style="color:green;"></i>'
         : '<i class="fa fa-video fa-2x" aria-hidden="true"></i>';
       talkbutton.style.background = "";
-      stopAudioViz();
+      stopAudioDetection();
       // notify network
       if (sendCmd) {
         sendCmd({ peerId: peerId, cmd: "stop_video" });
@@ -1053,7 +1044,7 @@ applyGrid();
       room.addStream(newStream);
       handleStream(newStream, selfId);
       streaming = newStream;
-      startAudioViz(newStream);
+      startAudioDetection(newStream);
       monitorStreamHealth(newStream, 'media');
       
       console.log('Media stream recovered successfully');
