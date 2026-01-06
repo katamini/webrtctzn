@@ -1033,9 +1033,12 @@ applyGrid();
       if (!room) return;
       
       const peers = room.getPeers();
-      if (!peers || !Array.isArray(peers)) return;
+      if (!peers) return;
       
-      for (const peerId of peers) {
+      // Handle both Array and Set/iterable types
+      const peerList = Array.isArray(peers) ? peers : Array.from(peers || []);
+      
+      for (const peerId of peerList) {
         try {
           const latency = await room.ping(peerId);
           
@@ -1375,11 +1378,28 @@ applyGrid();
     if (!room) return;
     try {
       const peers = room.getPeers();
-      // Trystero getPeers() returns an array of peer IDs (excluding self)
-      const count = peers && Array.isArray(peers) ? peers.length : 0;
+      // Trystero getPeers() returns an array/Set of peer IDs (excluding self)
+      // Handle both Array and Set/iterable types
+      let peerCount = 0;
+      if (peers) {
+        if (Array.isArray(peers)) {
+          peerCount = peers.length;
+        } else if (peers instanceof Set) {
+          peerCount = peers.size;
+        } else if (typeof peers.size === 'number') {
+          peerCount = peers.size;
+        } else if (typeof peers.length === 'number') {
+          peerCount = peers.length;
+        } else {
+          // Fallback: convert to array
+          peerCount = Array.from(peers || []).length;
+        }
+      }
+      // Include local user in count
+      const totalCount = peerCount + 1;
       const roomNumEl = byId("room-num");
       if (roomNumEl) {
-        roomNumEl.innerText = "#" + window.roomId + ` (${count})`;
+        roomNumEl.innerText = "#" + window.roomId + ` (${totalCount})`;
       }
     } catch (error) {
       console.error('Error updating peer info:', error);
