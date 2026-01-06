@@ -824,22 +824,45 @@ applyGrid();
     getRoomName();
     return; // Exit early - getRoomName will redirect the page
   }
+  
+  // Unified function to update both buttons consistently
+  const updateCallButtons = (isStreaming = false) => {
+    // Update talkbutton (call button)
+    if (talkbutton) {
+      if (isStreaming) {
+        // When streaming: red background, white icon
+        talkbutton.innerHTML = !features.video
+          ? '<i class="fa fa-phone fa-2x" aria-hidden="true" style="color:white;"></i>'
+          : '<i class="fa fa-video fa-2x" aria-hidden="true" style="color:white;"></i>';
+        talkbutton.style.background = "red";
+      } else {
+        // When not streaming: no background, icon based on video preference
+        talkbutton.innerHTML = !features.video
+          ? '<i class="fa fa-phone fa-2x" aria-hidden="true" style="color:green;"></i>'
+          : '<i class="fa fa-video fa-2x" aria-hidden="true"></i>';
+        talkbutton.style.background = "";
+      }
+    }
+    
+    // Update videoToggle button (always shows video icon, green when audio-only)
+    if (videoToggle) {
+      videoToggle.innerHTML = features.video
+        ? '<i class="fa fa-video fa-2x" aria-hidden="true"></i>'
+        : '<i class="fa fa-video fa-2x" aria-hidden="true" style="color:green;"></i>';
+      videoToggle.style.background = "";
+      videoToggle.title = features.video ? "Video enabled" : "Audio-only by default";
+    }
+  };
+  
   // URL parameters override localStorage preferences
   if (urlParams.has("video")) {
     features.video = true;
-    talkbutton.innerHTML =
-      '<i class="fa fa-video fa-2x" aria-hidden="true"></i>';
   }
   if (urlParams.has("audio")) {
     features.video = false;
-    talkbutton.innerHTML =
-      '<i class="fa fa-phone fa-2x" aria-hidden="true"></i>';
   }
-  // Update button icon based on current video preference
-  if (!urlParams.has("video") && !urlParams.has("audio") && features.video) {
-    talkbutton.innerHTML =
-      '<i class="fa fa-video fa-2x" aria-hidden="true"></i>';
-  }
+  // Update buttons based on current video preference (not streaming yet)
+  updateCallButtons(false);
 
   if (urlParams.has("username")) {
     userName = urlParams.get("username");
@@ -992,10 +1015,8 @@ applyGrid();
       // Hide avatar when streaming starts
       const selfAvatar = byId("avatar_" + selfId);
       if (selfAvatar && features.video) selfAvatar.style.display = "none";
-      talkbutton.innerHTML = !features.video
-        ? '<i class="fa fa-phone fa-2x" aria-hidden="true" style="color:white;"></i>'
-        : '<i class="fa fa-video fa-2x" aria-hidden="true" style="color:white;"></i>';
-      talkbutton.style.background = "red";
+      // Update both buttons when streaming starts
+      updateCallButtons(true);
       // Save streaming state for auto-reconnect
       localStorage.setItem("wasStreaming", "true");
       // notify network
@@ -1021,16 +1042,6 @@ applyGrid();
     }
   }
   
-  const updateVideoToggle = () => {
-    if (!videoToggle) return;
-    // Match talkbutton behavior exactly - no background change, just icon styling
-    videoToggle.innerHTML = features.video
-      ? '<i class="fa fa-video fa-2x" aria-hidden="true"></i>'
-      : '<i class="fa fa-video fa-2x" aria-hidden="true" style="color:green;"></i>';
-    videoToggle.style.background = "";
-    videoToggle.title = features.video ? "Video enabled" : "Audio-only by default";
-  };
-  updateVideoToggle();
 
   async function restartStreamingForToggle() {
     if (!streaming) return;
@@ -1052,7 +1063,8 @@ applyGrid();
       features.video = !features.video;
       // Save video preference to localStorage
       localStorage.setItem("videoPreference", features.video.toString());
-      updateVideoToggle();
+      // Update buttons when video preference changes
+      updateCallButtons(streaming ? true : false);
       if (streaming) {
         restartStreamingForToggle();
       }
@@ -1081,11 +1093,8 @@ applyGrid();
       mutebutton.innerHTML =
         '<i class="fa fa-microphone fa-2x" aria-hidden="true"></i>';
       muted = false;
-      // reset call button
-      talkbutton.innerHTML = !features.video
-        ? '<i class="fa fa-phone fa-2x" aria-hidden="true" style="color:green;"></i>'
-        : '<i class="fa fa-video fa-2x" aria-hidden="true"></i>';
-      talkbutton.style.background = "";
+      // Update both buttons when streaming stops
+      updateCallButtons(false);
       stopAudioDetection();
       // notify network
       if (sendCmd) {
