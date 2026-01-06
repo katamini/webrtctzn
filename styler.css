@@ -869,37 +869,12 @@ body {
     height: auto;
     min-height: 100vh;
   }
-  .mobile-menu {
-    display: flex;
-  }
+  .mobile-menu,
   .mobile-shell {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 8px;
-  }
-  .mobile-tabs {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-    gap: 6px;
-  }
-  .mobile-tab {
-    background: #1b1b1b;
-    color: #cfcfcf;
-    border: 1px solid #333;
-    border-radius: 6px;
-    padding: 10px;
-    text-align: center;
-    font-size: 12px;
-    cursor: pointer;
-  }
-  .mobile-tab.active {
-    background: #444;
-    border-color: #777;
+    display: none;
   }
   .tile {
-    min-height: 100px;
+    min-height: 12vh;
     display: flex;
     transition: min-height 0.2s ease, transform 0.2s ease;
     order: var(--tile-order, 9);
@@ -908,10 +883,6 @@ body {
   .tile.mobile-primary {
     min-height: 60vh;
     opacity: 1;
-  }
-  .tile.mobile-secondary {
-    min-height: 22vh;
-    opacity: 0.95;
   }
   .tile.mobile-mini {
     min-height: 10vh;
