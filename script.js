@@ -55,6 +55,21 @@ var start = function() {
   const ctx = whiteboard.getContext("2d");
   const drawSurface = byId("draw-surface");
   const mainGrid = byId("main-grid");
+  
+  // Sound effects for peer join/leave
+  function playSound(soundFile) {
+    try {
+      const audio = new Audio(`static/${soundFile}`);
+      audio.volume = 0.5; // Set volume to 50% to avoid being too loud
+      audio.play().catch(err => {
+        // Ignore errors (e.g., if user hasn't interacted with page yet)
+        console.debug('Could not play sound:', err);
+      });
+    } catch (err) {
+      // Ignore errors silently
+      console.debug('Sound playback error:', err);
+    }
+  }
   const colHandlesTop = document.querySelectorAll('.resize-layer.outer .resize-handle.col[data-row="top"]');
   const colHandlesBottom = document.querySelectorAll('.resize-layer.outer .resize-handle.col[data-row="bottom"]');
   const rowHandles = document.querySelectorAll(".resize-layer.outer .resize-handle.row");
@@ -1038,6 +1053,7 @@ applyGrid();
     if (roomNumEl) roomNumEl.innerText = "#" + n;
     room.onPeerJoin(joiningPeerId => {
       console.log('Peer joined:', joiningPeerId);
+      playSound('positive.mp3');
       addCursor(joiningPeerId);
       // Small delay to ensure getPeers() reflects the new peer
       setTimeout(() => {
@@ -1460,6 +1476,7 @@ applyGrid();
 
   function removeCursor(id) {
     console.log('Peer left:', id);
+    playSound('negative.mp3');
     if (cursors[id]) {
       canvas.removeChild(cursors[id]);
       delete cursors[id];
