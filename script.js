@@ -858,6 +858,7 @@ applyGrid();
     room.onPeerJoin(joiningPeerId => {
       console.log('Peer joined:', joiningPeerId);
       addCursor(joiningPeerId);
+      updatePeerInfo(); // Update peer count when peer joins
       
       // Send username immediately to new peer
       if (userName && sendCmd) {
@@ -915,6 +916,11 @@ applyGrid();
 
     // mappings
     window.ctl = { sendCmd: sendCmd, sendPic: sendPic, peerId: selfId };
+    
+    // Initial peer count update (with small delay to ensure room is ready)
+    setTimeout(() => {
+      updatePeerInfo();
+    }, 100);
     
     // Setup stream health monitoring and keepalive
     setupStreamHealthMonitoring();
@@ -1292,13 +1298,25 @@ applyGrid();
 
   function updatePeerInfo() {
     if (!room) return;
-    const peers = room.getPeers();
-    const count = peers && Array.isArray(peers) ? peers.length : 0;
-    const roomNumEl = byId("room-num");
-    if (roomNumEl) roomNumEl.innerText = "#" + window.roomId + ` (${count})`;
+    try {
+      const peers = room.getPeers();
+      // Trystero getPeers() returns an array of peer IDs (excluding self)
+      const count = peers && Array.isArray(peers) ? peers.length : 0;
+      const roomNumEl = byId("room-num");
+      if (roomNumEl) {
+        roomNumEl.innerText = "#" + window.roomId + ` (${count})`;
+      }
+    } catch (error) {
+      console.error('Error updating peer info:', error);
+      const roomNumEl = byId("room-num");
+      if (roomNumEl) {
+        roomNumEl.innerText = "#" + window.roomId;
+      }
+    }
     if (userName && sendCmd) {
       sendCmd({ peerId: selfId, cmd: "username", username: userName });
     }
+  }
     /*
     peerInfo.innerHTML = count
       ? `Right now <em>${count}</em> other peer${
