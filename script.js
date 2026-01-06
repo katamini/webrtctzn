@@ -70,6 +70,95 @@ var start = function() {
       console.debug('Sound playback error:', err);
     }
   }
+
+  // Whiteboard state persistence and P2P sharing
+  let whiteboardStateReceived = false; // Track if we've received a whiteboard state
+  const WHITEBOARD_EXPIRY_HOURS = 48;
+  
+  function saveWhiteboardState(roomId) {
+    if (!whiteboard) return;
+    try {
+      const stateData = whiteboard.toDataURL('image/png');
+      const expiryTime = Date.now() + (WHITEBOARD_EXPIRY_HOURS * 60 * 60 * 1000);
+      const storageData = {
+        state: stateData,
+        expiry: expiryTime,
+        roomId: roomId
+      };
+      localStorage.setItem(`whiteboard_${roomId}`, JSON.stringify(storageData));
+    } catch (err) {
+      console.warn('Failed to save whiteboard state:', err);
+    }
+  }
+  // Expose globally for utils.js
+  window.saveWhiteboardState = saveWhiteboardState;
+
+  function loadWhiteboardState(roomId) {
+    if (!whiteboard) return false;
+    try {
+      const stored = localStorage.getItem(`whiteboard_${roomId}`);
+      if (!stored) return false;
+      
+      const data = JSON.parse(stored);
+      // Check if expired
+      if (Date.now() > data.expiry) {
+        localStorage.removeItem(`whiteboard_${roomId}`);
+        return false;
+      }
+      
+      // Check if it's for the current room
+      if (data.roomId !== roomId) return false;
+      
+      // Load the state
+      const img = new Image();
+      img.onload = function() {
+        ctx.clearRect(0, 0, whiteboard.width, whiteboard.height);
+        ctx.drawImage(img, 0, 0);
+        whiteboardStateReceived = true;
+      };
+      img.src = data.state;
+      return true;
+    } catch (err) {
+      console.warn('Failed to load whiteboard state:', err);
+      return false;
+    }
+  }
+
+  function isCanvasEmpty() {
+    if (!whiteboard) return true;
+    try {
+      const imageData = ctx.getImageData(0, 0, whiteboard.width, whiteboard.height);
+      const data = imageData.data;
+      // Check if all pixels are transparent (or background color)
+      for (let i = 3; i < data.length; i += 4) {
+        if (data[i] !== 0) return false; // Found non-transparent pixel
+      }
+      return true;
+    } catch (err) {
+      return true; // Assume empty on error
+    }
+  }
+
+  function requestWhiteboardState() {
+    if (sendCmd && !whiteboardStateReceived) {
+      sendCmd({ peerId: selfId, cmd: "request_whiteboard" });
+    }
+  }
+
+  function sendWhiteboardState(peerId) {
+    if (!whiteboard || !sendCmd) return;
+    try {
+      const stateData = whiteboard.toDataURL('image/png');
+      sendCmd({ 
+        peerId: selfId, 
+        cmd: "whiteboard_state", 
+        state: stateData,
+        roomId: window.roomId 
+      }, peerId);
+    } catch (err) {
+      console.warn('Failed to send whiteboard state:', err);
+    }
+  }
   const colHandlesTop = document.querySelectorAll('.resize-layer.outer .resize-handle.col[data-row="top"]');
   const colHandlesBottom = document.querySelectorAll('.resize-layer.outer .resize-handle.col[data-row="bottom"]');
   const rowHandles = document.querySelectorAll(".resize-layer.outer .resize-handle.row");
@@ -449,14 +538,14 @@ var start = function() {
       });
     }
 
-    if (rowHandles && rowHandles.length) {
-      rowHandles.forEach(handle => {
-        const idx = Number(handle.dataset.index);
-        const rowAcc = rowPerc.slice(0, idx + 1).reduce((a, b) => a + b, 0);
-        handle.style.top = (rowAcc / totalRows) * 100 + "%";
-      });
-    }
+  if (rowHandles && rowHandles.length) {
+    rowHandles.forEach(handle => {
+      const idx = Number(handle.dataset.index);
+      const rowAcc = rowPerc.slice(0, idx + 1).reduce((a, b) => a + b, 0);
+      handle.style.top = (rowAcc / totalRows) * 100 + "%";
+    });
   }
+}
 applyGrid();
 
   function applyMobileOrder() {
@@ -549,7 +638,7 @@ applyGrid();
 
   function expandTile(tile) {
     if (isMobile && tile && tile.dataset.tile) {
-      setMobileActive(tile.dataset.tile);
+        setMobileActive(tile.dataset.tile);
     }
     if (!tile) return;
     const tiles = Array.from(document.querySelectorAll(".tile"));
@@ -1043,6 +1132,8 @@ applyGrid();
     window.room = room;
     window.roomId = n;
     window.self = selfId;
+    // Reset whiteboard state received flag for new room
+    whiteboardStateReceived = false;
     [sendMove, getMove] = room.makeAction("mouseMove");
     [sendChat, getChat] = room.makeAction("chat");
     [sendCmd, getCmd] = room.makeAction("cmd");
@@ -1121,6 +1212,18 @@ applyGrid();
     setTimeout(() => {
       updatePeerInfo();
     }, 100);
+    
+    // Load whiteboard state from localStorage and request from peers if empty
+    setTimeout(() => {
+      if (whiteboard && window.roomId) {
+        // Try to load from localStorage first
+        const loaded = loadWhiteboardState(window.roomId);
+        if (!loaded && isCanvasEmpty()) {
+          // Canvas is empty and no local state - request from peers
+          requestWhiteboardState();
+        }
+      }
+    }, 500); // Delay to ensure room is fully initialized
     
     // Setup stream health monitoring and keepalive
     setupStreamHealthMonitoring();
@@ -1298,6 +1401,10 @@ applyGrid();
         meta.pos.x * window.innerWidth,
         meta.pos.y * window.innerHeight
       );
+      // Save whiteboard state after image is drawn
+      if (window.roomId) {
+        setTimeout(() => saveWhiteboardState(window.roomId), 500);
+      }
     };
   }
   // command handler
@@ -1338,9 +1445,33 @@ applyGrid();
         //console.log("got image", data);
         //displayImageOnCanvas(data.img, data.pos);
       } else if (data.cmd == "draw" && data.plots) {
-        if (data.plots && data.color) drawOnCanvas(data.color, data.plots);
+        if (data.plots && data.color) {
+          drawOnCanvas(data.color, data.plots);
+          // Save whiteboard state after drawing
+          if (window.roomId) saveWhiteboardState(window.roomId);
+        }
       } else if (data.cmd == "clear") {
         if (whiteboard) whiteboard.width = whiteboard.width;
+        // Save cleared state
+        if (window.roomId) saveWhiteboardState(window.roomId);
+      } else if (data.cmd == "request_whiteboard") {
+        // Peer is requesting whiteboard state - send it if we have one
+        if (window.roomId && !isCanvasEmpty()) {
+          sendWhiteboardState(id);
+        }
+      } else if (data.cmd == "whiteboard_state" && data.state && data.roomId) {
+        // Received whiteboard state - load it if canvas is empty and we haven't received one yet
+        if (!whiteboardStateReceived && isCanvasEmpty() && data.roomId === window.roomId) {
+          whiteboardStateReceived = true; // Mark as received to prevent loading multiple
+          const img = new Image();
+          img.onload = function() {
+            ctx.clearRect(0, 0, whiteboard.width, whiteboard.height);
+            ctx.drawImage(img, 0, 0);
+            // Save the received state to localStorage
+            saveWhiteboardState(window.roomId);
+          };
+          img.src = data.state;
+        }
       } else if (data.cmd == "screenshare") {
         //console.log("remote screenshare session incoming", data);
         shareScreenButton.disabled = true;
@@ -1507,7 +1638,7 @@ applyGrid();
 
     // Small delay to ensure getPeers() reflects the peer leaving
     setTimeout(() => {
-      updatePeerInfo();
+    updatePeerInfo();
     }, 50);
   }
 
@@ -1554,7 +1685,7 @@ applyGrid();
     if (userName && sendCmd) {
       sendCmd({ peerId: selfId, cmd: "username", username: userName });
     }
-  }
+    }
     /*
     peerInfo.innerHTML = count
       ? `Right now <em>${count}</em> other peer${
@@ -1608,6 +1739,8 @@ applyGrid();
     if (sendCmd) {
       sendCmd({ peerId: selfId, cmd: "clear" });
     }
+    // Save cleared state
+    if (window.roomId) saveWhiteboardState(window.roomId);
   };
 
   window.shareUrl = function() {
@@ -1683,6 +1816,16 @@ applyGrid();
       );
     }
     ctx.stroke();
+    // Save whiteboard state after drawing (throttled)
+    if (local && window.roomId) {
+      // Debounce saves to avoid too frequent localStorage writes
+      if (!window.whiteboardSaveTimeout) {
+        window.whiteboardSaveTimeout = setTimeout(() => {
+          saveWhiteboardState(window.roomId);
+          window.whiteboardSaveTimeout = null;
+        }, 1000); // Save 1 second after last draw
+      }
+    }
   }
 
   var screenSharing = false;

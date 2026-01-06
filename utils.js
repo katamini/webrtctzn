@@ -70,6 +70,12 @@ function displayImageOnCanvas(imgx, pos) {
         ctl.sendPic(blob, null, { pos: pos, peerId: ctl.peerId });
       });
     }
+    // Save whiteboard state after image is dropped (if saveWhiteboardState is available)
+    if (window.roomId && typeof window.saveWhiteboardState === 'function') {
+      setTimeout(function() {
+        window.saveWhiteboardState(window.roomId);
+      }, 500);
+    }
   };
 }
 
