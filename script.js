@@ -190,6 +190,9 @@ var start = function() {
   let analyser = null;
   let audioSource = null;
   let audioRaf = null;
+  
+  // Remote peer audio detection (minimal CPU usage)
+  const remoteAudioDetectors = new Map(); // peerId -> { analyser, source, raf, frameCount }
 
   function stopAudioDetection() {
     if (audioRaf) {
@@ -244,6 +247,79 @@ var start = function() {
       }
     };
     detect();
+  }
+
+  function stopRemoteAudioDetection(peerId) {
+    const detector = remoteAudioDetectors.get(peerId);
+    if (!detector) return;
+    
+    if (detector.raf) {
+      cancelAnimationFrame(detector.raf);
+    }
+    if (detector.source) {
+      try { detector.source.disconnect(); } catch (e) {}
+    }
+    
+    // Reset avatar scale
+    const avatar = byId("avatar_" + peerId);
+    if (avatar) {
+      avatar.style.transform = "scale(1)";
+    }
+    
+    remoteAudioDetectors.delete(peerId);
+  }
+
+  function startRemoteAudioDetection(stream, peerId) {
+    // Clean up existing detector if any
+    stopRemoteAudioDetection(peerId);
+    
+    if (!stream || stream.getAudioTracks().length === 0) return;
+    
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    
+    // Use shared audio context or create new one
+    if (!audioCtx) audioCtx = new AudioCtx();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 32; // Smaller FFT for remote streams (minimal CPU)
+    analyser.smoothingTimeConstant = 0.9; // More smoothing for stability
+    const audioData = new Uint8Array(analyser.frequencyBinCount);
+    const source = audioCtx.createMediaStreamSource(stream);
+    source.connect(analyser);
+    
+    const detector = { analyser, source, raf: null };
+    remoteAudioDetectors.set(peerId, detector);
+    
+    let frameCount = 0;
+    const detect = () => {
+      detector.raf = requestAnimationFrame(detect);
+      frameCount++;
+      
+      // Sample every 4 frames to reduce CPU usage (~15fps instead of 60fps)
+      if (frameCount % 4 !== 0) return;
+      
+      analyser.getByteFrequencyData(audioData);
+      
+      // Simple average (minimal compute)
+      let sum = 0;
+      for (let i = 0; i < audioData.length; i++) {
+        sum += audioData[i];
+      }
+      const avgLevel = sum / audioData.length / 255;
+      
+      // Animate avatar based on audio level (threshold: 0.1)
+      const avatar = byId("avatar_" + peerId);
+      if (avatar && avgLevel > 0.1) {
+        const scale = 1 + (avgLevel * 0.15); // Scale from 1.0 to 1.15
+        avatar.style.transform = `scale(${scale.toFixed(2)})`;
+      } else if (avatar) {
+        avatar.style.transform = "scale(1)";
+      }
+    };
+    
+    detector.raf = requestAnimationFrame(detect);
   }
 
   const defaultColPercTop = [25, 25, 25, 25];
@@ -1176,6 +1252,11 @@ applyGrid();
         // Hide avatar when stream is active, show when stream stops
         if (av) av.style.display = stream && stream.getVideoTracks().length > 0 ? "none" : "flex";
       }, 200);
+      
+      // Start lightweight audio detection for remote peers
+      if (peerId !== selfId && stream && stream.getAudioTracks().length > 0) {
+        startRemoteAudioDetection(stream, peerId);
+      }
     }
   }
 
@@ -1273,6 +1354,9 @@ applyGrid();
       room.removeStream(streams[id], id);
       delete streams[id];
     }
+    
+    // Clean up remote audio detection
+    stopRemoteAudioDetection(id);
     
     // Clean up peer health tracking
     if (peerHealthStatus[id]) {
