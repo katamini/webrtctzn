@@ -122,8 +122,8 @@ var start = function() {
     }
   });
   
-  var userStroke = "#c2c2c2";
-  var boardBg = "#f6f6f6";
+  var userStroke = "#f6f6f6";
+  var boardBg = "#1a1a1a";
   function applyBoardBg() {
     if (drawSurface) drawSurface.style.background = boardBg;
     if (whiteboard) whiteboard.style.backgroundColor = boardBg;
