@@ -81,6 +81,7 @@ var start = function() {
     settings: 8
   };
   let mobilePrimary = "video";
+  const mobilePriority = ["video", "chat", "screen", "draw", "voice", "file", "experiment", "settings"];
   const whoList = null;
 
   const circle = null;
@@ -422,46 +423,68 @@ applyGrid();
     });
   }
 
-  function setMobileActive(target) {
-    if (!isMobile) return;
-    if (!target) target = activeMobile || "chat";
-    activeMobile = target;
+  function applyMobileOrder() {
     tiles.forEach(tile => {
-      if (tile.dataset.tile === target) tile.classList.add("mobile-active");
-      else tile.classList.remove("mobile-active");
+      const key = tile.dataset.tile;
+      const order = mobileOrder[key] || 9;
+      tile.style.setProperty("--tile-order", order);
+    });
+  }
+
+  function updateMobileStack(primaryTarget) {
+    if (!isMobile) return;
+    const primary = primaryTarget || mobilePrimary || "video";
+    mobilePrimary = primary;
+    const secondary = mobilePriority.find(
+      key => key !== primary && tiles.some(t => t.dataset.tile === key)
+    );
+    tiles.forEach(tile => {
+      const key = tile.dataset.tile;
+      tile.classList.remove("mobile-primary", "mobile-secondary", "mobile-mini", "mobile-active");
+      if (key === primary) {
+        tile.classList.add("mobile-primary", "mobile-active");
+      } else if (key === secondary) {
+        tile.classList.add("mobile-secondary");
+      } else {
+        tile.classList.add("mobile-mini");
+      }
     });
     mobileTabs.forEach(tab => {
-      tab.classList.toggle("active", tab.dataset.target === target);
+      tab.classList.toggle("active", tab.dataset.target === primary);
     });
     setWhiteboardSize();
   }
 
+  function setMobileActive(target) {
+    if (!isMobile) return;
+    if (!target) target = activeMobile || "chat";
+    activeMobile = target;
+    updateMobileStack(target);
+  }
+
   if (isMobile) {
-    setMobileActive(activeMobile);
     applyMobileOrder();
-    setMobilePrimary(mobilePrimary);
+    updateMobileStack(mobilePrimary);
   }
 
   mobileQuery.addEventListener("change", e => {
     isMobile = e.matches;
     if (isMobile) {
-      setMobileActive(activeMobile || "chat");
-      setMobileCollapsed(false);
       applyMobileOrder();
-      setMobilePrimary(mobilePrimary);
+      updateMobileStack(mobilePrimary || "video");
+      setMobileCollapsed(false);
     } else {
-      tiles.forEach(tile => tile.classList.remove("mobile-active"));
+      tiles.forEach(tile => tile.classList.remove("mobile-active", "mobile-primary", "mobile-secondary", "mobile-mini"));
       mobileTabs.forEach(tab => tab.classList.remove("active"));
       setMobileCollapsed(false);
-      tiles.forEach(tile => tile.classList.remove("mobile-primary"));
     }
   });
 
   mobileTabs.forEach(tab => {
     tab.addEventListener("click", () => {
       activeMobile = tab.dataset.target;
-      setMobileActive(activeMobile);
-      setMobilePrimary(activeMobile);
+      applyMobileOrder();
+      updateMobileStack(activeMobile);
     });
   });
 
@@ -590,8 +613,8 @@ applyGrid();
       if (!isMobile) return;
       const tile = head.closest(".tile");
       if (tile && tile.dataset.tile) {
-        setMobileActive(tile.dataset.tile);
-        setMobilePrimary(tile.dataset.tile);
+        applyMobileOrder();
+        updateMobileStack(tile.dataset.tile);
       }
     });
   });

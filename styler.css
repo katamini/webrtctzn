@@ -865,7 +865,7 @@ body {
   .main-grid {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
     height: auto;
     min-height: 100vh;
   }
@@ -899,13 +899,23 @@ body {
     border-color: #777;
   }
   .tile {
-    min-height: 150px;
+    min-height: 100px;
     display: flex;
     transition: min-height 0.2s ease, transform 0.2s ease;
     order: var(--tile-order, 9);
+    opacity: 0.9;
   }
   .tile.mobile-primary {
-    min-height: 55vh;
+    min-height: 60vh;
+    opacity: 1;
+  }
+  .tile.mobile-secondary {
+    min-height: 22vh;
+    opacity: 0.95;
+  }
+  .tile.mobile-mini {
+    min-height: 10vh;
+    opacity: 0.85;
   }
   .resize-layer {
     display: block;
