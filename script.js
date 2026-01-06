@@ -853,7 +853,8 @@ applyGrid();
     [sendPic, getPic] = room.makeAction("pic");
     [sendYouTubeAction, getYouTubeAction] = room.makeAction("youtube");
 
-    byId("room-num").innerText = "#" + n;
+    const roomNumEl = byId("room-num");
+    if (roomNumEl) roomNumEl.innerText = "#" + n;
     room.onPeerJoin(joiningPeerId => {
       console.log('Peer joined:', joiningPeerId);
       addCursor(joiningPeerId);
@@ -1293,7 +1294,8 @@ applyGrid();
     if (!room) return;
     const peers = room.getPeers();
     const count = peers && Array.isArray(peers) ? peers.length : 0;
-    byId("room-num").innerText = "#" + window.roomId + ` (${count})`;
+    const roomNumEl = byId("room-num");
+    if (roomNumEl) roomNumEl.innerText = "#" + window.roomId + ` (${count})`;
     if (userName && sendCmd) {
       sendCmd({ peerId: selfId, cmd: "username", username: userName });
     }
