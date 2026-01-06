@@ -70,6 +70,17 @@ var start = function() {
   const mobileHandle = byId("mobile-handle");
   let isMobile = mobileQuery.matches;
   let activeMobile = "chat";
+  const mobileOrder = {
+    video: 1, // FRIENDS
+    chat: 2,
+    screen: 3,
+    draw: 4,
+    voice: 5,
+    file: 6,
+    experiment: 7,
+    settings: 8
+  };
+  let mobilePrimary = "video";
   const whoList = null;
 
   const circle = null;
@@ -395,6 +406,22 @@ var start = function() {
   }
 applyGrid();
 
+  function applyMobileOrder() {
+    tiles.forEach(tile => {
+      const key = tile.dataset.tile;
+      const order = mobileOrder[key] || 9;
+      tile.style.setProperty("--tile-order", order);
+    });
+  }
+
+  function setMobilePrimary(target) {
+    if (!isMobile || !target) return;
+    mobilePrimary = target;
+    tiles.forEach(tile => {
+      tile.classList.toggle("mobile-primary", tile.dataset.tile === mobilePrimary);
+    });
+  }
+
   function setMobileActive(target) {
     if (!isMobile) return;
     if (!target) target = activeMobile || "chat";
@@ -411,6 +438,8 @@ applyGrid();
 
   if (isMobile) {
     setMobileActive(activeMobile);
+    applyMobileOrder();
+    setMobilePrimary(mobilePrimary);
   }
 
   mobileQuery.addEventListener("change", e => {
@@ -418,10 +447,13 @@ applyGrid();
     if (isMobile) {
       setMobileActive(activeMobile || "chat");
       setMobileCollapsed(false);
+      applyMobileOrder();
+      setMobilePrimary(mobilePrimary);
     } else {
       tiles.forEach(tile => tile.classList.remove("mobile-active"));
       mobileTabs.forEach(tab => tab.classList.remove("active"));
       setMobileCollapsed(false);
+      tiles.forEach(tile => tile.classList.remove("mobile-primary"));
     }
   });
 
@@ -429,6 +461,7 @@ applyGrid();
     tab.addEventListener("click", () => {
       activeMobile = tab.dataset.target;
       setMobileActive(activeMobile);
+      setMobilePrimary(activeMobile);
     });
   });
 
@@ -558,6 +591,7 @@ applyGrid();
       const tile = head.closest(".tile");
       if (tile && tile.dataset.tile) {
         setMobileActive(tile.dataset.tile);
+        setMobilePrimary(tile.dataset.tile);
       }
     });
   });

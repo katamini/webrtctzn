@@ -863,6 +863,9 @@ body {
     min-height: auto;
   }
   .main-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     height: auto;
     min-height: 100vh;
   }
@@ -896,8 +899,13 @@ body {
     border-color: #777;
   }
   .tile {
-    min-height: 240px;
+    min-height: 150px;
     display: flex;
+    transition: min-height 0.2s ease, transform 0.2s ease;
+    order: var(--tile-order, 9);
+  }
+  .tile.mobile-primary {
+    min-height: 55vh;
   }
   .resize-layer {
     display: block;
