@@ -112,6 +112,10 @@ var start = function() {
   
   var userStroke = "#c2c2c2";
   var boardBg = "#f6f6f6";
+  function applyBoardBg() {
+    if (drawSurface) drawSurface.style.background = boardBg;
+    if (whiteboard) whiteboard.style.backgroundColor = boardBg;
+  }
   const colorPicker = byId("favcolor");
   colorPicker.addEventListener("change", function(event){
     userStroke = event.target.value;
@@ -121,7 +125,7 @@ var start = function() {
   if (bgPicker) {
     bgPicker.addEventListener("change", function(event) {
       boardBg = event.target.value || "#f6f6f6";
-      drawSurface.style.background = boardBg;
+      applyBoardBg();
     });
   }
 
@@ -130,7 +134,7 @@ var start = function() {
     const rect = drawSurface.getBoundingClientRect();
     whiteboard.width = rect.width;
     whiteboard.height = rect.height;
-    drawSurface.style.background = boardBg;
+    applyBoardBg();
   }
   setWhiteboardSize();
 
