@@ -111,17 +111,26 @@ var start = function() {
   });
   
   var userStroke = "#c2c2c2";
+  var boardBg = "#f6f6f6";
   const colorPicker = byId("favcolor");
   colorPicker.addEventListener("change", function(event){
     userStroke = event.target.value;
     closeNav();
   }, false);
+  const bgPicker = byId("bgcolor");
+  if (bgPicker) {
+    bgPicker.addEventListener("change", function(event) {
+      boardBg = event.target.value || "#f6f6f6";
+      drawSurface.style.background = boardBg;
+    });
+  }
 
   function setWhiteboardSize() {
     if (!drawSurface) return;
     const rect = drawSurface.getBoundingClientRect();
     whiteboard.width = rect.width;
     whiteboard.height = rect.height;
+    drawSurface.style.background = boardBg;
   }
   setWhiteboardSize();
 
@@ -329,7 +338,7 @@ var start = function() {
   let colPercBottom = [...defaultColPercBottom];
   let rowPerc = [...defaultRowPerc];
   const minCol = 10;
-  const minRow = 15;
+  const minRow = 25;
   let expandedTile = null;
   let savedPerc = null;
   let restarting = false;
