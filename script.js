@@ -1039,7 +1039,10 @@ applyGrid();
     room.onPeerJoin(joiningPeerId => {
       console.log('Peer joined:', joiningPeerId);
       addCursor(joiningPeerId);
-      updatePeerInfo(); // Update peer count when peer joins
+      // Small delay to ensure getPeers() reflects the new peer
+      setTimeout(() => {
+        updatePeerInfo();
+      }, 50);
       
       // Send username immediately to new peer
       if (userName && sendCmd) {
@@ -1485,13 +1488,21 @@ applyGrid();
       frame.parentNode.removeChild(frame);
     }
 
-    updatePeerInfo();
+    // Small delay to ensure getPeers() reflects the peer leaving
+    setTimeout(() => {
+      updatePeerInfo();
+    }, 50);
   }
 
   function updatePeerInfo() {
-    if (!room) return;
+    // Use window.room as primary source since it's explicitly set
+    const currentRoom = window.room || room;
+    if (!currentRoom) {
+      console.warn('updatePeerInfo: No room available');
+      return;
+    }
     try {
-      const peers = room.getPeers();
+      const peers = currentRoom.getPeers();
       // Trystero getPeers() returns an array/Set of peer IDs (excluding self)
       // Handle both Array and Set/iterable types
       let peerCount = 0;
@@ -1514,6 +1525,7 @@ applyGrid();
       const roomNumEl = byId("room-num");
       if (roomNumEl) {
         roomNumEl.innerText = "#" + window.roomId + ` (${totalCount})`;
+        console.log('updatePeerInfo: Updated count to', totalCount, 'peers:', Array.isArray(peers) ? peers : Array.from(peers || []));
       }
     } catch (error) {
       console.error('Error updating peer info:', error);
