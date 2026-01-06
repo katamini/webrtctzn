@@ -769,7 +769,7 @@ applyGrid();
 
   //const peerInfo = byId("peer-info");
   //const noPeersCopy = peerInfo.innerText;
-  const config = { appId: "ctzn-glitch" };
+  const config = { appId: "ctzn-oltra" };
   const cursors = {};
   const roomCap = 33;
   const avatars = [
