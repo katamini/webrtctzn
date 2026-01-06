@@ -1005,16 +1005,34 @@ applyGrid();
   // Helper function to start streaming with common setup
   async function startStreaming(autoReconnect = false) {
     try {
+      // For auto-reconnect, always use audio-only (video is never auto-restored)
+      // Temporarily override features.video for auto-reconnect
+      const originalVideoState = features.video;
+      if (autoReconnect) {
+        features.video = false;
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia(getMediaConstraints());
+      
       room.addStream(stream);
       handleStream(stream, selfId);
       streaming = stream;
       startAudioDetection(stream);
       monitorStreamHealth(stream, 'media');
       muted = false;
-      // Hide avatar when streaming starts
+      
+      // For auto-reconnect: ensure features.video reflects actual stream state (audio-only)
+      // This ensures buttons show correct icons (phone, not video)
+      if (autoReconnect) {
+        features.video = false;
+        // Don't save this to localStorage - user's preference stays, but stream is audio-only
+      }
+      
+      // Hide avatar when streaming starts (only if video is actually enabled)
       const selfAvatar = byId("avatar_" + selfId);
-      if (selfAvatar && features.video) selfAvatar.style.display = "none";
+      if (selfAvatar && stream.getVideoTracks().length > 0) {
+        selfAvatar.style.display = "none";
+      }
       // Update both buttons when streaming starts
       updateCallButtons(true);
       // Save streaming state for auto-reconnect
@@ -1247,7 +1265,7 @@ applyGrid();
     }, 500);
   }
   
-  // Auto-reconnect function to restore previous streaming state
+  // Auto-reconnect function - always restores audio-only (never video)
   async function attemptAutoReconnect() {
     const wasStreaming = localStorage.getItem("wasStreaming");
     const lastRoom = localStorage.getItem("lastRoom");
@@ -1257,8 +1275,11 @@ applyGrid();
     // 2. They're rejoining the same room
     // 3. They're not already streaming
     if (wasStreaming === "true" && lastRoom === roomName && !streaming) {
-      console.log("Auto-reconnecting to previous stream...");
+      console.log("Auto-reconnecting to previous stream (audio-only)...");
+      // startStreaming(true) will force audio-only internally
       await startStreaming(true);
+      // Update buttons to reflect audio-only streaming state
+      updateCallButtons(true);
     }
   }
   
@@ -1847,9 +1868,14 @@ applyGrid();
         });
         
         // Monitor screen share track for when user stops sharing
+        const screenShareStreamId = stream.id; // Store ID to verify we're removing the right stream
         stream.getTracks()[0].addEventListener('ended', () => {
           console.log('Screen share ended by user');
-          if (screenSharing) {
+          if (screenSharing && screenSharing.id === screenShareStreamId) {
+            // Verify this is still the active screen share stream
+            const currentRoom = room || window.room;
+            if (!currentRoom) return;
+            
             // Clean up when user clicks "Stop sharing" in browser UI
             if (sendCmd) {
               sendCmd({
@@ -1858,30 +1884,27 @@ applyGrid();
                 stream: screenSharing.id
               });
             }
-            // Remove screen share stream from all peers (but NOT the main media stream)
-            const screenShareStream = screenSharing;
-            const currentRoom = room || window.room;
-            if (currentRoom) {
-              const peers = currentRoom.getPeers();
-              if (peers) {
-                const peerList = Array.isArray(peers) ? peers : Array.from(peers || []);
-                peerList.forEach(peerId => {
-                  try {
-                    currentRoom.removeStream(screenShareStream, peerId);
-                  } catch (e) {
-                    console.warn('Error removing screen share from peer:', e);
+            
+            // Remove screen share stream from each peer individually (never touch main media stream)
+            const peers = currentRoom.getPeers();
+            if (peers) {
+              const peerList = Array.isArray(peers) ? peers : Array.from(peers || []);
+              peerList.forEach(peerId => {
+                try {
+                  // Only remove the screen share stream, verify it's not the main media stream
+                  if (screenSharing && screenSharing.id !== (streaming ? streaming.id : null)) {
+                    currentRoom.removeStream(screenSharing, peerId);
                   }
-                });
-              }
-              // Also remove globally (this should only remove the screen share stream)
-              try {
-                currentRoom.removeStream(screenShareStream);
-              } catch (e) {
-                // Ignore if it doesn't support global removal
-              }
+                } catch (e) {
+                  console.warn('Error removing screen share from peer:', e);
+                }
+              });
             }
-            // Stop all tracks in the screen share stream
-            screenShareStream.getTracks().forEach(track => track.stop());
+            
+            // Stop all tracks in the screen share stream ONLY
+            const tracks = screenSharing.getTracks();
+            tracks.forEach(track => track.stop());
+            
             shareScreenButton.classList.remove("blinking");
             shareView.srcObject = null;
             screenSharing = false;
@@ -1905,40 +1928,48 @@ applyGrid();
       }
     } else {
       // Stop screen sharing - only remove screen share stream, NOT main media stream
+      const currentRoom = room || window.room;
+      if (!currentRoom || !screenSharing) return;
+      
+      // Verify we're not accidentally removing the main media stream
+      const screenShareStreamId = screenSharing.id;
+      const mainStreamId = streaming ? streaming.id : null;
+      
+      if (screenShareStreamId === mainStreamId) {
+        console.error('ERROR: Screen share stream ID matches main media stream! Aborting removal.');
+        return;
+      }
+      
       if (sendCmd) {
         sendCmd({
           peerId: selfId + "_screen",
           cmd: "stop_screenshare",
-          stream: screenSharing.id
+          stream: screenShareStreamId
         });
       }
-      // Remove screen share stream from all peers (but NOT the main media stream)
-      const screenShareStream = screenSharing;
-      const currentRoom = room || window.room;
-      if (currentRoom) {
-        const peers = currentRoom.getPeers();
-        if (peers) {
-          const peerList = Array.isArray(peers) ? peers : Array.from(peers || []);
-          peerList.forEach(peerId => {
-            try {
-              currentRoom.removeStream(screenShareStream, peerId);
-            } catch (e) {
-              console.warn('Error removing screen share from peer:', e);
+      
+      // Remove screen share stream from each peer individually (never touch main media stream)
+      const peers = currentRoom.getPeers();
+      if (peers) {
+        const peerList = Array.isArray(peers) ? peers : Array.from(peers || []);
+        peerList.forEach(peerId => {
+          try {
+            // Double-check: only remove if it's definitely the screen share stream
+            if (screenSharing && screenSharing.id === screenShareStreamId && screenSharing.id !== mainStreamId) {
+              currentRoom.removeStream(screenSharing, peerId);
             }
-          });
-        }
-        // Also remove globally (this should only remove the screen share stream)
-        try {
-          currentRoom.removeStream(screenShareStream);
-        } catch (e) {
-          // Ignore if it doesn't support global removal
-        }
+          } catch (e) {
+            console.warn('Error removing screen share from peer:', e);
+          }
+        });
       }
+      
       // Stop all tracks in the screen share stream ONLY
-      var tracks = screenShareStream.getTracks();
+      const tracks = screenSharing.getTracks();
       tracks.forEach(function(track) {
         track.stop();
       });
+      
       shareScreenButton.classList.remove("blinking");
       shareView.srcObject = null;
       screenSharing = false;
