@@ -1567,6 +1567,11 @@ applyGrid();
     var msg = data.msg;
     var user = data.username || id;
 
+    // Play sound for messages from other users (not self)
+    if (id != selfId) {
+      playSound('message.mp3');
+    }
+
     if (isValidHttpUrl(msg) && id != selfId) {
       //var open = window.confirm(user + " is sharing a url. Trust it?");
       //if (open) {
