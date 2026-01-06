@@ -561,6 +561,12 @@ body {
   color: #b5b5b5;
 }
 
+.tile-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .tile-body {
   display: flex;
   flex-direction: column;
