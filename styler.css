@@ -732,6 +732,13 @@ body {
   align-items: center;
   gap: 10px;
   margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.draw-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 #draw-surface {
