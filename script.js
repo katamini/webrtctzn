@@ -1,4 +1,4 @@
-import { joinRoom, selfId } from "https://esm.run/trystero/torrent";
+import { joinRoom, selfId } from "https://esm.run/trystero";
 import quickLru from 'https://cdn.skypack.dev/quick-lru@6.1.2';
 const lru = new quickLru({maxSize: 1000});
 
@@ -1679,12 +1679,35 @@ applyGrid();
             // Clean up when user clicks "Stop sharing" in browser UI
             if (sendCmd) {
               sendCmd({
-                peerId: peerId,
+                peerId: selfId + "_screen",
                 cmd: "stop_screenshare",
                 stream: screenSharing.id
               });
             }
-            room.removeStream(screenSharing);
+            // Remove screen share stream from all peers (but NOT the main media stream)
+            const screenShareStream = screenSharing;
+            const currentRoom = room || window.room;
+            if (currentRoom) {
+              const peers = currentRoom.getPeers();
+              if (peers) {
+                const peerList = Array.isArray(peers) ? peers : Array.from(peers || []);
+                peerList.forEach(peerId => {
+                  try {
+                    currentRoom.removeStream(screenShareStream, peerId);
+                  } catch (e) {
+                    console.warn('Error removing screen share from peer:', e);
+                  }
+                });
+              }
+              // Also remove globally (this should only remove the screen share stream)
+              try {
+                currentRoom.removeStream(screenShareStream);
+              } catch (e) {
+                // Ignore if it doesn't support global removal
+              }
+            }
+            // Stop all tracks in the screen share stream
+            screenShareStream.getTracks().forEach(track => track.stop());
             shareScreenButton.classList.remove("blinking");
             shareView.srcObject = null;
             screenSharing = false;
@@ -1707,20 +1730,41 @@ applyGrid();
         notifyMe('Failed to start screen sharing. Please try again.');
       }
     } else {
+      // Stop screen sharing - only remove screen share stream, NOT main media stream
       if (sendCmd) {
         sendCmd({
-          peerId: peerId,
+          peerId: selfId + "_screen",
           cmd: "stop_screenshare",
           stream: screenSharing.id
         });
       }
-      room.removeStream(screenSharing);
-      var tracks = screenSharing.getTracks();
+      // Remove screen share stream from all peers (but NOT the main media stream)
+      const screenShareStream = screenSharing;
+      const currentRoom = room || window.room;
+      if (currentRoom) {
+        const peers = currentRoom.getPeers();
+        if (peers) {
+          const peerList = Array.isArray(peers) ? peers : Array.from(peers || []);
+          peerList.forEach(peerId => {
+            try {
+              currentRoom.removeStream(screenShareStream, peerId);
+            } catch (e) {
+              console.warn('Error removing screen share from peer:', e);
+            }
+          });
+        }
+        // Also remove globally (this should only remove the screen share stream)
+        try {
+          currentRoom.removeStream(screenShareStream);
+        } catch (e) {
+          // Ignore if it doesn't support global removal
+        }
+      }
+      // Stop all tracks in the screen share stream ONLY
+      var tracks = screenShareStream.getTracks();
       tracks.forEach(function(track) {
         track.stop();
       });
-      //var el = byId("vid_" + selfId);
-      //el.srcObject = null;
       shareScreenButton.classList.remove("blinking");
       shareView.srcObject = null;
       screenSharing = false;
