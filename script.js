@@ -738,9 +738,15 @@ applyGrid();
   
   const updateVideoToggle = () => {
     if (!videoToggle) return;
-    videoToggle.innerText = features.video ? "Video on" : "Enable video";
-    videoToggle.title = features.video ? "Video enabled" : "Audio-only by default";
-    videoToggle.classList.toggle("active", !!features.video);
+    if (features.video) {
+      videoToggle.innerHTML = '<i class="fa fa-video fa-2x" aria-hidden="true" style="color:white;"></i>';
+      videoToggle.style.background = "red";
+      videoToggle.title = "Video enabled";
+    } else {
+      videoToggle.innerHTML = '<i class="fa fa-video fa-2x" aria-hidden="true"></i>';
+      videoToggle.style.background = "";
+      videoToggle.title = "Audio-only by default";
+    }
   };
   updateVideoToggle();
 
