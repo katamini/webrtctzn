@@ -1347,7 +1347,6 @@ applyGrid();
         } connected with you. Send them some fruit.`
       : noPeersCopy;
     */
-  }
 
   function updateChat(data, id) {
     var msg = data.msg;
