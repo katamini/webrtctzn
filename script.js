@@ -59,7 +59,7 @@ var start = function() {
   const colHandlesBottom = document.querySelectorAll('.resize-layer.outer .resize-handle.col[data-row="bottom"]');
   const rowHandles = document.querySelectorAll(".resize-layer.outer .resize-handle.row");
   const videoToggle = byId("video-toggle");
-  const videoFeed = byId("video-feed");
+  const videoFeed = byId("videochatbox");
   const chatSend = byId("chat-send");
   const audioViz = byId("audio-visualizer");
   const tiles = Array.from(document.querySelectorAll(".tile"));
