@@ -82,6 +82,8 @@ var start = function() {
   };
   let mobilePrimary = "video";
   const mobilePriority = ["video", "chat", "screen", "draw", "voice", "file", "experiment", "settings"];
+  const themeToggle = byId("theme-toggle");
+  let theme = localStorage.getItem("theme") || "dark";
   const whoList = null;
 
   const circle = null;
@@ -124,6 +126,10 @@ var start = function() {
   
   var userStroke = "#f6f6f6";
   var boardBg = "#1a1a1a";
+  const defaultDarkStroke = "#f6f6f6";
+  const defaultDarkBg = "#1a1a1a";
+  const defaultLightStroke = "#111111";
+  const defaultLightBg = "#f6f6f6";
   function applyBoardBg() {
     if (drawSurface) drawSurface.style.background = boardBg;
     if (whiteboard) whiteboard.style.backgroundColor = boardBg;
@@ -139,6 +145,37 @@ var start = function() {
       boardBg = event.target.value || "#f6f6f6";
       applyBoardBg();
     });
+  }
+
+  function applyThemeMode(nextTheme) {
+    theme = nextTheme === "light" ? "light" : "dark";
+    document.body.classList.toggle("theme-light", theme === "light");
+    if (themeToggle) {
+      themeToggle.textContent = theme === "light" ? "Dark theme" : "Light theme";
+    }
+    // Adjust draw defaults if user left them at defaults
+    if (theme === "light") {
+      if (boardBg === defaultDarkBg) {
+        boardBg = defaultLightBg;
+        if (bgPicker) bgPicker.value = boardBg;
+        applyBoardBg();
+      }
+      if (userStroke === defaultDarkStroke) {
+        userStroke = defaultLightStroke;
+        if (colorPicker) colorPicker.value = userStroke;
+      }
+    } else {
+      if (boardBg === defaultLightBg) {
+        boardBg = defaultDarkBg;
+        if (bgPicker) bgPicker.value = boardBg;
+        applyBoardBg();
+      }
+      if (userStroke === defaultLightStroke) {
+        userStroke = defaultDarkStroke;
+        if (colorPicker) colorPicker.value = userStroke;
+      }
+    }
+    localStorage.setItem("theme", theme);
   }
 
   function setWhiteboardSize() {
@@ -465,6 +502,13 @@ applyGrid();
   if (isMobile) {
     applyMobileOrder();
     updateMobileStack(mobilePrimary);
+  }
+
+  applyThemeMode(theme);
+  if (themeToggle) {
+    themeToggle.addEventListener("click", () => {
+      applyThemeMode(theme === "light" ? "dark" : "light");
+    });
   }
 
   mobileQuery.addEventListener("change", e => {
