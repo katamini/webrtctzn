@@ -70,7 +70,13 @@
 
             <section class="tile video" data-tile="video">
               <div class="tile-head">
-                <div class="tile-title">WHO</div>
+                <div class="tile-title">ROOM</div>
+                <button title="Join / leave call" type="button" id="talkbutton" class="pill-btn">
+                  <i class="fa fa-phone fa-2x" aria-hidden="true"></i>
+                </button>
+                <button title="Mute / unmute" type="button" id="mutebutton" class="pill-btn" disabled>
+                  <i class="fa fa-microphone fa-2x" aria-hidden="true"></i>
+                </button>
                 <button type="button" id="video-toggle" class="ghost-btn">Enable video</button>
               </div>
               <div id="video-feed" class="media-feed"></div>
