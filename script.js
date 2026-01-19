@@ -282,50 +282,26 @@ var start = function() {
     localStorage.setItem("theme", theme);
   }
 
+  // Track if canvas has been initialized with a fixed size
+  let whiteboardInitialized = false;
+  
   function setWhiteboardSize() {
     if (!drawSurface || !whiteboard) return;
-    const rect = drawSurface.getBoundingClientRect();
-    const newWidth = Math.max(1, Math.floor(rect.width));
-    const newHeight = Math.max(1, Math.floor(rect.height));
     
-    // Skip if dimensions haven't changed
-    if (whiteboard.width === newWidth && whiteboard.height === newHeight) {
-      return;
+    // Only set canvas size once on initial load - never change it after that
+    if (!whiteboardInitialized) {
+      const rect = drawSurface.getBoundingClientRect();
+      const initialWidth = Math.max(1, Math.floor(rect.width));
+      const initialHeight = Math.max(1, Math.floor(rect.height));
+      
+      // Set fixed canvas dimensions (only once)
+      whiteboard.width = initialWidth;
+      whiteboard.height = initialHeight;
+      applyBoardBg();
+      whiteboardInitialized = true;
     }
-    
-    // Only preserve content if canvas already has content
-    const hasContent = whiteboard.width > 0 && whiteboard.height > 0;
-    
-    let savedImage = null;
-    if (hasContent) {
-      // Save current canvas content before resizing
-      try {
-        savedImage = new Image();
-        savedImage.src = whiteboard.toDataURL('image/png');
-        savedImage.onerror = function() {
-          console.warn('Failed to save whiteboard content during resize');
-        };
-      } catch (err) {
-        console.warn('Error saving whiteboard content:', err);
-      }
-    }
-    
-    // Set new dimensions (this clears the canvas)
-    whiteboard.width = newWidth;
-    whiteboard.height = newHeight;
-    applyBoardBg();
-    
-    // Restore content if we saved it
-    if (savedImage) {
-      savedImage.onload = function() {
-        try {
-          // Draw the saved content back onto the resized canvas
-          ctx.drawImage(savedImage, 0, 0, newWidth, newHeight);
-        } catch (err) {
-          console.warn('Error restoring whiteboard content:', err);
-        }
-      };
-    }
+    // After initialization, do nothing - canvas size remains fixed
+    // CSS will handle visual scaling, but drawing coordinates stay consistent
   }
   setWhiteboardSize();
 
